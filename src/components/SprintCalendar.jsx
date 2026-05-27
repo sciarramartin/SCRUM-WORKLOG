@@ -43,6 +43,14 @@ export default function SprintCalendar({ activeSprint, logs, currentUser, onOpen
     weeks.push(days.slice(i, i + 5));
   }
 
+  // Calcular las horas de reunión de todo el equipo por día
+  const teamMeetingsByDay = logs.reduce((acc, log) => {
+    if (log.meetings > 0) {
+      acc[log.date] = Math.max(acc[log.date] || 0, log.meetings);
+    }
+    return acc;
+  }, {});
+
   // Filtrar logs del usuario actual
   const userLogs = logs.reduce((acc, log) => {
     if (log.userId === currentUser?.id) {
@@ -86,7 +94,10 @@ export default function SprintCalendar({ activeSprint, logs, currentUser, onOpen
               <div className="week-title">Semana {weekIdx + 1}</div>
               <div className="days-grid">
                 {weekDays.map(day => {
-                  const log = userLogs[day.dateString] || { development: 0, meetings: 0, documentation: 0 };
+                  const sharedMeetings = teamMeetingsByDay[day.dateString] || 0;
+                  const log = userLogs[day.dateString] 
+                    ? { ...userLogs[day.dateString], meetings: Math.max(userLogs[day.dateString].meetings, sharedMeetings) }
+                    : { development: 0, meetings: sharedMeetings, documentation: 0, notes: '', isSharedOnly: true };
                   const totalHours = log.development + log.meetings + log.documentation;
                   
                   const isToday = day.dateString === todayStr;

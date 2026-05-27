@@ -36,6 +36,14 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   const meetPct = totalHours > 0 ? (totals.meetings / totalHours) * 100 : 0;
   const docPct = totalHours > 0 ? (totals.documentation / totalHours) * 100 : 0;
 
+  // Contar cantidad de reuniones realizadas (días distintos con reuniones registradas > 0)
+  const meetingDays = new Set(
+    filteredLogs
+      .filter(log => log.meetings > 0)
+      .map(log => log.date)
+  );
+  const meetingCount = meetingDays.size;
+
   // --- CÁLCULOS COMPARATIVOS HISTÓRICOS ---
   // Calcular promedios por persona para todos los sprints
   const sprintHistory = sprints.map(sprint => {
@@ -132,25 +140,40 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       {/* Fila de Tarjetas Estadísticas */}
       <div className="stat-card-group">
         <div className="stat-card">
-          <span className="stat-label">Desarrollo Promedio</span>
+          <span className="stat-label">Suma Desarrollo</span>
           <span className="stat-value" style={{ color: 'var(--color-dev)' }}>
-            {avgDev.toFixed(1)} <span style={{ fontSize: '1rem', fontWeight: 500 }}>hrs</span>
+            {totals.development.toFixed(1)} <span style={{ fontSize: '1rem', fontWeight: 500 }}>hrs</span>
           </span>
-          <span className="stat-sub">Por persona en este sprint</span>
+          <span className="stat-sub">
+            {viewType === 'user' ? 'Mis horas totales' : `Promedio: ${avgDev.toFixed(1)}h / pers`}
+          </span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Reuniones Promedio</span>
+          <span className="stat-label">Suma Reuniones</span>
           <span className="stat-value" style={{ color: 'var(--color-meetings)' }}>
-            {avgMeetings.toFixed(1)} <span style={{ fontSize: '1rem', fontWeight: 500 }}>hrs</span>
+            {totals.meetings.toFixed(1)} <span style={{ fontSize: '1rem', fontWeight: 500 }}>hrs</span>
           </span>
-          <span className="stat-sub">Por persona en este sprint</span>
+          <span className="stat-sub">
+            {viewType === 'user' ? 'Mis horas totales' : `Promedio: ${avgMeetings.toFixed(1)}h / pers`}
+          </span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Documentación Promedio</span>
+          <span className="stat-label">Suma Documentación</span>
           <span className="stat-value" style={{ color: 'var(--color-doc)' }}>
-            {avgDoc.toFixed(1)} <span style={{ fontSize: '1rem', fontWeight: 500 }}>hrs</span>
+            {totals.documentation.toFixed(1)} <span style={{ fontSize: '1rem', fontWeight: 500 }}>hrs</span>
           </span>
-          <span className="stat-sub">Por persona en este sprint</span>
+          <span className="stat-sub">
+            {viewType === 'user' ? 'Mis horas totales' : `Promedio: ${avgDoc.toFixed(1)}h / pers`}
+          </span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Reuniones Realizadas</span>
+          <span className="stat-value" style={{ color: 'var(--color-other)' }}>
+            {meetingCount} <span style={{ fontSize: '1rem', fontWeight: 500 }}>{meetingCount === 1 ? 'reunión' : 'reuniones'}</span>
+          </span>
+          <span className="stat-sub">
+            {viewType === 'user' ? 'En las que participé' : 'Totales en el sprint'}
+          </span>
         </div>
       </div>
 
