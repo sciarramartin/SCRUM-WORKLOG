@@ -1,0 +1,32 @@
+{
+  "users": [
+    {
+      "id": "1779905652155",
+      "name": "martin",
+      "avatar": "🤖",
+      "role": "Developer"
+    }
+  ],
+  "sprints": [
+    {
+      "id": "sprint-1779905639892",
+      "goals": [],
+      "name": "SPRINT 2",
+      "startDate": "2026-05-19",
+      "endDate": "2026-06-02"
+    }
+  ],
+  "worklogs": [
+    {
+      "userId": "1779905652155",
+      "sprintId": "sprint-1779905639892",
+      "date": "2026-05-19",
+      "development": 0,
+      "meetings": 0,
+      "documentation": 0,
+      "notes": "",
+      "id": "log-17799056685022fe4l"
+    }
+  ],
+  "retroActions": []
+}
