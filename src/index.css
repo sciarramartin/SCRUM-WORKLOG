@@ -858,6 +858,31 @@ button, input, select, textarea {
 
 /* Estilos de Impresión / Guardado en PDF */
 @media print {
+  /* Redefinir variables de tema para forzar colores claros de alto contraste en papel,
+     incluso si el usuario tiene activado el modo oscuro en la interfaz web */
+  :root,
+  [data-theme="dark"] {
+    --bg-primary: #ffffff !important;
+    --bg-secondary: #ffffff !important;
+    --bg-glass: #ffffff !important;
+    --border-color: #e4e4e7 !important;
+    --border-focus: #09090b !important;
+    --shadow-color: rgba(0, 0, 0, 0) !important;
+
+    --text-primary: #09090b !important;
+    --text-secondary: #52525b !important;
+    --text-muted: #71717a !important;
+
+    --primary: #09090b !important;
+    --primary-hover: #27272a !important;
+    --primary-light: #f4f4f5 !important;
+
+    /* Forzar colores de horas legibles e impresos con buena saturación */
+    --color-dev: #1d4ed8 !important;       /* Azul más oscuro */
+    --color-meetings: #b45309 !important;  /* Ámbar más oscuro */
+    --color-doc: #047857 !important;       /* Esmeralda más oscuro */
+  }
+
   /* Ocultar elementos de la interfaz de la aplicación */
   .app-header,
   .sidebar-panel,
