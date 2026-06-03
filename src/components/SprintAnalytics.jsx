@@ -554,7 +554,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
             </div>
           ) : (
             <div className="chart-container">
-              <svg width="100%" height={chartHeight} style={{ overflow: 'visible' }}>
+              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} width="100%" height="auto" style={{ maxWidth: '100%', overflow: 'visible' }}>
                 {/* Grid Lines */}
                 {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
                   const y = padY + (1 - val) * (chartHeight - padY * 2);
@@ -653,7 +653,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       </div>
 
       {/* --- NUEVO GRÁFICO: BURN-DOWN CHART (SEGUIMIENTO DE SPRINT) --- */}
-      <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'center' }}>
+      <div className="glass-card grid-layout-2col">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
             <Flame size={16} style={{ color: 'var(--warning)' }} /> Progreso de Carga & Capacidad
@@ -711,7 +711,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                 No hay rango de fechas válidas para graficar el progreso.
               </div>
             ) : (
-              <svg width="100%" height={bdHeight} style={{ overflow: 'visible' }}>
+              <svg viewBox={`0 0 ${bdWidth} ${bdHeight}`} width="100%" height="auto" style={{ maxWidth: '100%', overflow: 'visible' }}>
                 {/* Grid Lines Horizontales */}
                 {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
                   const y = bdPadY + (1 - val) * (bdHeight - bdPadY * 2);
@@ -823,7 +823,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
             Ingresa estos datos en la pestaña de **Configuración** de cada sprint.
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'center' }}>
+          <div className="grid-layout-2col">
             
             {/* Panel de Resumen Consolidado */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -890,7 +890,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
               </div>
 
               <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                <svg width="100%" height={trendHeight} style={{ overflow: 'visible' }}>
+                <svg viewBox={`0 0 ${trendWidth} ${trendHeight}`} width="100%" height="auto" style={{ maxWidth: '100%', overflow: 'visible' }}>
                   
                   {/* Grid Lines Horizontales */}
                   {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {

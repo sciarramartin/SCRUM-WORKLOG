@@ -841,6 +841,21 @@ button, input, select, textarea {
   transform: scale(1.25);
 }
 
+/* Grid layout de dos columnas responsivo (para charts y paneles) */
+.grid-layout-2col {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .grid-layout-2col {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
 /* Estilos de Impresión / Guardado en PDF */
 @media print {
   /* Ocultar elementos de la interfaz de la aplicación */
@@ -854,12 +869,18 @@ button, input, select, textarea {
   }
 
   /* Desactivar fondos oscuros o degradados y forzar blanco/negro limpio */
+  /* display: block !important en nodos raíz previene que Chrome corte páginas de contenedores flex */
+  #root,
   body, 
   .app-container {
+    display: block !important;
     background: #ffffff !important;
     color: #09090b !important;
     padding: 0 !important;
     margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -873,10 +894,19 @@ button, input, select, textarea {
   }
 
   .main-content {
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  /* Reducir a 1 columna los layouts de 2 columnas en papel para dar espacio a los gráficos */
+  .grid-layout-2col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+    width: 100% !important;
   }
 
   /* Adaptar tarjetas principales de vidrio a papel */
