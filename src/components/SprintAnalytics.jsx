@@ -198,7 +198,16 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   const predictability = estimatedSp > 0 ? (realSp / estimatedSp) * 100 : 0;
 
   const handleExportExcel = () => {
-    // Encabezados
+    const escapeXML = (str) => {
+      if (!str) return '';
+      return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    };
+
     const headers = [
       "Sprint",
       "Fecha Inicio",
@@ -213,9 +222,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       "Horas Reuniones",
       "Horas Documentación"
     ];
-    
-    // Filas
-    const rows = validSprints.map(s => {
+
+    const rowsXML = validSprints.map((s, idx) => {
       const sprintLogs = logs.filter(l => l.sprintId === s.id);
       const totals = sprintLogs.reduce((acc, log) => {
         acc.dev += log.development;
@@ -228,32 +236,108 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       const realSp = s.velocity || 0;
       const pred = estSp > 0 ? `${((realSp / estSp) * 100).toFixed(0)}%` : "0%";
       
-      return [
-        s.name,
-        s.startDate,
-        s.endDate,
-        estSp,
-        realSp,
-        pred,
-        s.errors || 0,
-        s.capacity || 6,
-        totalH.toFixed(1),
-        totals.dev.toFixed(1),
-        totals.meet.toFixed(1),
-        totals.doc.toFixed(1)
-      ];
-    });
+      const isEven = idx % 2 === 0;
+      const suffix = isEven ? "Even" : "Odd";
 
-    const csvContent = "\ufeff" + [
-      headers.join(";"),
-      ...rows.map(r => r.join(";"))
-    ].join("\n");
+      return `
+   <Row ss:Height="20">
+    <Cell ss:StyleID="Row${suffix}Left"><Data ss:Type="String">${escapeXML(s.name)}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Center"><Data ss:Type="String">${s.startDate}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Center"><Data ss:Type="String">${s.endDate}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${estSp}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${realSp}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="String">${pred}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${s.errors || 0}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${s.capacity || 6}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totalH.toFixed(1)}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totals.dev.toFixed(1)}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totals.meet.toFixed(1)}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totals.doc.toFixed(1)}</Data></Cell>
+   </Row>`;
+    }).join("");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const xmlTemplate = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Segoe UI" x:Family="Swiss" ss:Size="10" ss:Color="#000000"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="Header">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#27272a"/>
+   </Borders>
+   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Color="#FFFFFF" ss:Bold="1"/>
+   <Interior ss:Color="#18181b" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="RowEvenLeft">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+   <Interior ss:Color="#f4f4f5" ss:Pattern="Solid"/>
+   <Font ss:FontName="Segoe UI" ss:Size="10"/>
+  </Style>
+  <Style ss:ID="RowEvenCenter">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Interior ss:Color="#f4f4f5" ss:Pattern="Solid"/>
+   <Font ss:FontName="Segoe UI" ss:Size="10"/>
+  </Style>
+  <Style ss:ID="RowEvenRight">
+   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+   <Interior ss:Color="#f4f4f5" ss:Pattern="Solid"/>
+   <Font ss:FontName="Segoe UI" ss:Size="10"/>
+  </Style>
+  <Style ss:ID="RowOddLeft">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+   <Interior ss:Color="#ffffff" ss:Pattern="Solid"/>
+   <Font ss:FontName="Segoe UI" ss:Size="10"/>
+  </Style>
+  <Style ss:ID="RowOddCenter">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Interior ss:Color="#ffffff" ss:Pattern="Solid"/>
+   <Font ss:FontName="Segoe UI" ss:Size="10"/>
+  </Style>
+  <Style ss:ID="RowOddRight">
+   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+   <Interior ss:Color="#ffffff" ss:Pattern="Solid"/>
+   <Font ss:FontName="Segoe UI" ss:Size="10"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Métricas Sprints">
+  <Table>
+   <Column ss:Width="160"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="125"/>
+   <Column ss:Width="125"/>
+   <Column ss:Width="100"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="120"/>
+   <Column ss:Width="125"/>
+   <Column ss:Width="110"/>
+   <Column ss:Width="110"/>
+   <Column ss:Width="110"/>
+   <Row ss:Height="26">
+    ${headers.map(h => `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXML(h)}</Data></Cell>`).join("")}
+   </Row>
+   ${rowsXML}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+    const blob = new Blob([xmlTemplate], { type: "application/vnd.ms-excel" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `histograma_y_datos_sprints_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `reporte_sprints_${new Date().toISOString().split('T')[0]}.xls`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
