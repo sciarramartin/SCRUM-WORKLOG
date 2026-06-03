@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Plus, Save, Trash2, Milestone, AlertTriangle } from 'lucide-react';
-
+import { Settings, Plus, Save, Trash2, Milestone, AlertTriangle, Info } from 'lucide-react';
 export default function SprintManager({ sprints, activeSprint, onCreateSprint, onUpdateSprint, onDeleteSprint }) {
   const [newSprintName, setNewSprintName] = useState('');
   const [newStartDate, setNewStartDate] = useState('');
@@ -205,8 +204,12 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                     {/* Fila 3: Métricas de Cierre */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
                           🚀 Vel (pts)
+                          <span className="tooltip tooltip-left">
+                            <Info size={12} style={{ color: 'var(--text-muted)' }} />
+                            <span className="tooltiptext">Story Points completados en este sprint para medir la velocidad real.</span>
+                          </span>
                         </label>
                         <input
                           type="number"
@@ -218,8 +221,12 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                         />
                       </div>
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
                           ⚡ Cap (h/d)
+                          <span className="tooltip tooltip-center">
+                            <Info size={12} style={{ color: 'var(--text-muted)' }} />
+                            <span className="tooltiptext">Capacidad teórica diaria de horas efectivas por cada desarrollador.</span>
+                          </span>
                         </label>
                         <input
                           type="number"
@@ -232,8 +239,12 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                         />
                       </div>
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px', color: 'var(--danger)' }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--danger)' }}>
                           ⚠️ Err
+                          <span className="tooltip tooltip-right">
+                            <Info size={12} style={{ color: 'var(--text-muted)' }} />
+                            <span className="tooltiptext">Errores o defectos detectados en producción o QA durante este sprint.</span>
+                          </span>
                         </label>
                         <input
                           type="number"

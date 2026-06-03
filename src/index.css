@@ -766,3 +766,65 @@ button, input, select, textarea {
   align-items: center;
   margin-bottom: 0.4rem;
 }
+
+/* Tooltips */
+.tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 170px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.7rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  line-height: 1.35;
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  position: absolute;
+  bottom: 130%;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  pointer-events: none;
+  border: 1px solid var(--border-color);
+  white-space: normal;
+  text-transform: none; /* Evita que herede uppercase de form-label */
+}
+
+/* Posiciones */
+.tooltip-left .tooltiptext {
+  left: 0;
+  transform: translateY(4px);
+}
+.tooltip-left:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tooltip-center .tooltiptext {
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+}
+.tooltip-center:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.tooltip-right .tooltiptext {
+  right: 0;
+  transform: translateY(4px);
+}
+.tooltip-right:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
