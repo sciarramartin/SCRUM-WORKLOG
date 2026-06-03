@@ -1,11 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import UserSelector from './components/UserSelector';
-import SprintSelector from './components/SprintSelector';
-import SprintCalendar from './components/SprintCalendar';
-import LogHoursModal from './components/LogHoursModal';
-import SprintAnalytics from './components/SprintAnalytics';
-import SprintManager from './components/SprintManager';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+
+const Header = lazy(() => import('./components/Header'));
+const UserSelector = lazy(() => import('./components/UserSelector'));
+const SprintSelector = lazy(() => import('./components/SprintSelector'));
+const SprintCalendar = lazy(() => import('./components/SprintCalendar'));
+const LogHoursModal = lazy(() => import('./components/LogHoursModal'));
+const SprintAnalytics = lazy(() => import('./components/SprintAnalytics'));
+const SprintManager = lazy(() => import('./components/SprintManager'));
+
+function ComponentLoader() {
+  return (
+    <div className="loading-spinner-container">
+      <div className="loading-spinner" />
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+        Cargando módulo...
+      </span>
+    </div>
+  );
+}
+
 
 import { 
   fetchUsers, 
@@ -198,24 +211,28 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <Header />
+      <Suspense fallback={<div style={{ height: '70px' }} />}>
+        <Header />
+      </Suspense>
 
       <div className="dashboard-grid">
         {/* Panel Lateral de Control */}
         <aside className="sidebar-panel">
-          <UserSelector 
-            users={users} 
-            currentUser={currentUser} 
-            onSelectUser={handleSelectUser}
-            onCreateUser={handleCreateUser}
-            onUpdateUser={handleUpdateUser}
-            onDeleteUser={handleDeleteUser}
-          />
-          <SprintSelector 
-            sprints={sprints}
-            activeSprint={activeSprint}
-            onSelectSprint={handleSelectSprint}
-          />
+          <Suspense fallback={<ComponentLoader />}>
+            <UserSelector 
+              users={users} 
+              currentUser={currentUser} 
+              onSelectUser={handleSelectUser}
+              onCreateUser={handleCreateUser}
+              onUpdateUser={handleUpdateUser}
+              onDeleteUser={handleDeleteUser}
+            />
+            <SprintSelector 
+              sprints={sprints}
+              activeSprint={activeSprint}
+              onSelectSprint={handleSelectSprint}
+            />
+          </Suspense>
         </aside>
 
         {/* Panel de Contenido Principal */}
@@ -246,45 +263,49 @@ export default function App() {
           </nav>
 
           {/* Renderizado Condicional de Vistas */}
-          {activeTab === 'calendar' && (
-            <SprintCalendar 
-              activeSprint={activeSprint}
-              logs={logs.filter(l => l.sprintId === activeSprint?.id)}
-              currentUser={currentUser}
-              onOpenLogModal={handleOpenLogModal}
-            />
-          )}
+          <Suspense fallback={<ComponentLoader />}>
+            {activeTab === 'calendar' && (
+              <SprintCalendar 
+                activeSprint={activeSprint}
+                logs={logs.filter(l => l.sprintId === activeSprint?.id)}
+                currentUser={currentUser}
+                onOpenLogModal={handleOpenLogModal}
+              />
+            )}
 
-          {activeTab === 'analytics' && (
-            <SprintAnalytics 
-              sprints={sprints}
-              activeSprint={activeSprint}
-              logs={logs}
-              users={users}
-              currentUser={currentUser}
-            />
-          )}
+            {activeTab === 'analytics' && (
+              <SprintAnalytics 
+                sprints={sprints}
+                activeSprint={activeSprint}
+                logs={logs}
+                users={users}
+                currentUser={currentUser}
+              />
+            )}
 
-          {activeTab === 'config' && (
-            <SprintManager 
-              sprints={sprints}
-              activeSprint={activeSprint}
-              onCreateSprint={handleCreateSprint}
-              onUpdateSprint={handleUpdateSprint}
-              onDeleteSprint={handleDeleteSprint}
-            />
-          )}
+            {activeTab === 'config' && (
+              <SprintManager 
+                sprints={sprints}
+                activeSprint={activeSprint}
+                onCreateSprint={handleCreateSprint}
+                onUpdateSprint={handleUpdateSprint}
+                onDeleteSprint={handleDeleteSprint}
+              />
+            )}
+          </Suspense>
         </main>
       </div>
 
       {/* Modal Flotante de Carga de Horas */}
-      <LogHoursModal 
-        isOpen={isLogModalOpen}
-        onClose={() => setIsLogModalOpen(false)}
-        dateString={selectedDate}
-        logData={selectedLogData}
-        onSave={handleSaveLog}
-      />
+      <Suspense fallback={null}>
+        <LogHoursModal 
+          isOpen={isLogModalOpen}
+          onClose={() => setIsLogModalOpen(false)}
+          dateString={selectedDate}
+          logData={selectedLogData}
+          onSave={handleSaveLog}
+        />
+      </Suspense>
     </div>
   );
 }
