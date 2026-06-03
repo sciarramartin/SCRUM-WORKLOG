@@ -18,7 +18,8 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
         endDate: s.endDate,
         velocity: s.velocity || 0,
         errors: s.errors || 0,
-        capacity: s.capacity || 6
+        capacity: s.capacity || 6,
+        estimatedSp: s.estimatedSp || 0
       };
     });
     setEditingSprints(initialEditing);
@@ -58,7 +59,8 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
       name: data.name.trim(),
       velocity: parseInt(data.velocity) || 0,
       errors: parseInt(data.errors) || 0,
-      capacity: parseInt(data.capacity) || 6
+      capacity: parseInt(data.capacity) || 6,
+      estimatedSp: parseInt(data.estimatedSp) || 0
     });
     alert('Sprint actualizado correctamente.');
   };
@@ -202,13 +204,30 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                     </div>
 
                     {/* Fila 3: Métricas de Cierre */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          🚀 Vel (pts)
+                          🚀 Est (pts)
                           <span className="tooltip tooltip-left">
-                            <Info size={14} className="info-icon" />
-                            <span className="tooltiptext">Story Points completados en este sprint para medir la velocidad real.</span>
+                            <Info size={20} className="info-icon" />
+                            <span className="tooltiptext">Story Points estimados o planificados al inicio del sprint.</span>
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem' }}
+                          value={editState.estimatedSp || 0}
+                          min="0"
+                          onChange={(e) => handleFieldChange(sprint.id, 'estimatedSp', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          🎯 Real (pts)
+                          <span className="tooltip tooltip-center">
+                            <Info size={20} className="info-icon" />
+                            <span className="tooltiptext">Story Points reales completados al final del sprint (velocidad real).</span>
                           </span>
                         </label>
                         <input
@@ -224,7 +243,7 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                         <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
                           ⚡ Cap (h/d)
                           <span className="tooltip tooltip-center">
-                            <Info size={14} className="info-icon" />
+                            <Info size={20} className="info-icon" />
                             <span className="tooltiptext">Capacidad teórica diaria de horas efectivas por cada desarrollador.</span>
                           </span>
                         </label>
@@ -242,7 +261,7 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                         <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--danger)' }}>
                           ⚠️ Err
                           <span className="tooltip tooltip-right">
-                            <Info size={14} className="info-icon" />
+                            <Info size={20} className="info-icon" />
                             <span className="tooltiptext">Errores o defectos detectados en producción o QA durante este sprint.</span>
                           </span>
                         </label>

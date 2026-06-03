@@ -85,11 +85,11 @@ app.post('/api/sprints', async (req, res) => {
 app.put('/api/sprints/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, startDate, endDate, goals, velocity, errors, capacity } = req.body;
+    const { name, startDate, endDate, goals, velocity, errors, capacity, estimatedSp } = req.body;
     if (!name || !startDate || !endDate) {
       return res.status(400).json({ error: 'Nombre, fecha de inicio y fecha de fin son requeridos' });
     }
-    const updated = await db.updateSprint(id, { name, startDate, endDate, goals, velocity, errors, capacity });
+    const updated = await db.updateSprint(id, { name, startDate, endDate, goals, velocity, errors, capacity, estimatedSp });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });

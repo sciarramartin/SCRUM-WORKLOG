@@ -193,6 +193,10 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   const maxVelocityVal = Math.max(...validSprints.map(s => s.velocity || 0), 10);
   const maxErrorsVal = Math.max(...validSprints.map(s => s.errors || 0), 5);
 
+  const estimatedSp = activeSprint?.estimatedSp || 0;
+  const realSp = activeSprint?.velocity || 0;
+  const predictability = estimatedSp > 0 ? (realSp / estimatedSp) * 100 : 0;
+
   if (!activeSprint) {
     return (
       <div className="metrics-section">
@@ -211,7 +215,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         <h3 style={{ fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <BarChart3 size={18} className="text-secondary" /> Métricas del Ciclo
           <span className="tooltip tooltip-left">
-            <Info size={14} className="info-icon" />
+            <Info size={20} className="info-icon" />
             <span className="tooltiptext">Resumen de las horas trabajadas en desarrollo, reuniones y documentación durante el sprint.</span>
           </span>
         </h3>
@@ -240,7 +244,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             Suma Desarrollo
             <span className="tooltip tooltip-left">
-              <Info size={14} className="info-icon" />
+              <Info size={20} className="info-icon" />
               <span className="tooltiptext">Total de horas cargadas a tareas de programación y resolución de código.</span>
             </span>
           </span>
@@ -255,7 +259,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             Suma Reuniones
             <span className="tooltip tooltip-center">
-              <Info size={14} className="info-icon" />
+              <Info size={20} className="info-icon" />
               <span className="tooltiptext">Total de horas cargadas a reuniones de equipo y ceremonias Scrum.</span>
             </span>
           </span>
@@ -270,7 +274,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             Suma Documentación
             <span className="tooltip tooltip-center">
-              <Info size={14} className="info-icon" />
+              <Info size={20} className="info-icon" />
               <span className="tooltiptext">Total de horas dedicadas a especificaciones, wikis y documentación de soporte.</span>
             </span>
           </span>
@@ -285,7 +289,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             Reuniones del Sprint
             <span className="tooltip tooltip-center">
-              <Info size={14} className="info-icon" />
+              <Info size={20} className="info-icon" />
               <span className="tooltiptext">Días únicos del sprint donde se realizó al menos una reunión (basado en registros mayores a 0).</span>
             </span>
           </span>
@@ -298,9 +302,24 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         </div>
         <div className="stat-card">
           <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            Predecibilidad
+            <span className="tooltip tooltip-center">
+              <Info size={20} className="info-icon" />
+              <span className="tooltiptext">Precisión de estimación del sprint: (Story Points Reales / Estimados) * 100. El objetivo ágil es 85% - 100%.</span>
+            </span>
+          </span>
+          <span className="stat-value" style={{ color: predictability >= 85 && predictability <= 110 ? 'var(--success)' : 'var(--warning)' }}>
+            {estimatedSp > 0 ? `${predictability.toFixed(0)}%` : '-'}
+          </span>
+          <span className="stat-sub">
+            {estimatedSp} est. vs {realSp} real
+          </span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             Focus Score
             <span className="tooltip tooltip-right">
-              <Info size={14} className="info-icon" />
+              <Info size={20} className="info-icon" />
               <span className="tooltiptext">Cociente de horas de desarrollo frente a gestión. Si es mayor que 1.0, el foco está en programar.</span>
             </span>
           </span>
@@ -321,7 +340,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <TrendingUp size={14} /> Distribución de Horas ({viewType === 'user' ? 'Mío' : 'Equipo'})
             <span className="tooltip tooltip-right">
-              <Info size={14} className="info-icon" />
+              <Info size={20} className="info-icon" />
               <span className="tooltiptext">Muestra cómo se reparte el tiempo del sprint. Te ayuda a ver de un vistazo si hay sobrecarga de reuniones o documentación.</span>
             </span>
           </h4>
@@ -436,7 +455,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <TrendingUp size={14} /> Comparación de Sprints (Promedio por Persona)
             <span className="tooltip tooltip-right">
-              <Info size={14} className="info-icon" />
+              <Info size={20} className="info-icon" />
               <span className="tooltiptext">Compara las horas de desarrollo, reuniones y documentación promedio de cada miembro entre sprints previos.</span>
             </span>
           </h4>
@@ -551,7 +570,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
             <Flame size={16} style={{ color: 'var(--warning)' }} /> Progreso de Carga & Capacidad
             <span className="tooltip tooltip-left">
-              <Info size={14} className="info-icon" />
+              <Info size={20} className="info-icon" />
               <span className="tooltiptext">Compara las horas reportadas en el sprint contra el tiempo planificado disponible del equipo.</span>
             </span>
           </h4>
@@ -584,7 +603,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               📉 Burn-down del Sprint (Horas Pendientes)
               <span className="tooltip tooltip-right">
-                <Info size={14} className="info-icon" />
+                <Info size={20} className="info-icon" />
                 <span className="tooltiptext">La línea ideal (punteada) baja hacia cero. La línea real (continua) muestra las horas restantes por registrar. Si la línea real está por encima de la ideal, indica retraso.</span>
               </span>
             </span>
@@ -701,7 +720,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           <h3 style={{ fontSize: '1.05rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
             <Activity size={18} style={{ color: 'var(--primary)' }} /> Informe de Tendencias y Cierre de Proyecto
             <span className="tooltip tooltip-left">
-              <Info size={14} className="info-icon" />
+              <Info size={20} className="info-icon" />
               <span className="tooltiptext">Consolidado histórico de desempeño para evaluar la velocidad de entrega y bugs en las retrospectivas.</span>
             </span>
           </h3>
@@ -744,7 +763,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                 <h5 style={{ fontWeight: 700, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <TrendingUp size={14} style={{ color: 'var(--success)' }} /> Coeficiente de Estabilidad
                   <span className="tooltip tooltip-right">
-                    <Info size={14} className="info-icon" />
+                    <Info size={20} className="info-icon" />
                     <span className="tooltiptext">Evalúa el equilibrio entre velocidad y calidad. Si la velocidad aumenta pero los errores suben, indica alta deuda técnica.</span>
                   </span>
                 </h5>
@@ -768,7 +787,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   📊 Rendimiento Ágil (Story Points vs Defectos)
                   <span className="tooltip tooltip-right">
-                    <Info size={14} className="info-icon" />
+                    <Info size={20} className="info-icon" />
                     <span className="tooltiptext">Las barras representan la velocidad (Story Points completados) y la línea representa los errores (bugs) detectados en cada sprint.</span>
                   </span>
                 </span>
