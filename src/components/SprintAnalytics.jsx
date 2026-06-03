@@ -1169,7 +1169,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                   <Award size={18} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Velocidad Promedio</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Velocidad Promedio
+                    <span className="tooltip tooltip-left">
+                      <Info size={20} className="info-icon" />
+                      <span className="tooltiptext">Velocidad promedio de Story Points completados por sprint a lo largo del histórico. Útil para predecir la capacidad real del equipo en próximos sprints.</span>
+                    </span>
+                  </span>
                   <span style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{avgVelocity.toFixed(1)} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>pts</span></span>
                 </div>
               </div>
