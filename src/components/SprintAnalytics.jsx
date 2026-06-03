@@ -96,6 +96,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     };
   });
 
+  const visibleHistory = sprintHistory.slice(-6);
+
   // --- DATOS DEL BURN-DOWN CHART ---
   const businessDaysList = [];
   if (activeSprint?.startDate && activeSprint?.endDate) {
@@ -152,6 +154,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   const totalErrors = validSprints.reduce((acc, s) => acc + (s.errors || 0), 0);
   const avgErrors = totalSprints > 0 ? totalErrors / totalSprints : 0;
 
+  const visibleTrends = validSprints.slice(-6);
+
   // --- DISEÑO DE GRÁFICOS SVG ---
   
   // 1. Donut Chart para el tiempo del Sprint Activo
@@ -172,7 +176,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
   // Máximo valor para escalar las barras de horas
   const maxHoursVal = Math.max(
-    ...sprintHistory.map(sh => Math.max(sh.avgDev, sh.avgMeetings, sh.avgDoc)),
+    ...visibleHistory.map(sh => Math.max(sh.avgDev, sh.avgMeetings, sh.avgDoc)),
     8
   );
 
@@ -190,8 +194,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   const trendPadRight = 45;
   const trendPadY = 25;
 
-  const maxVelocityVal = Math.max(...validSprints.map(s => s.velocity || 0), 10);
-  const maxErrorsVal = Math.max(...validSprints.map(s => s.errors || 0), 5);
+  const maxVelocityVal = Math.max(...visibleTrends.map(s => s.velocity || 0), 10);
+  const maxErrorsVal = Math.max(...visibleTrends.map(s => s.errors || 0), 5);
 
   const estimatedSp = activeSprint?.estimatedSp || 0;
   const realSp = activeSprint?.velocity || 0;
@@ -657,8 +661,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                 })}
 
                 {/* Bars */}
-                {sprintHistory.map((sprint, sIdx) => {
-                  const colWidth = (chartWidth - padX) / sprintHistory.length;
+                {visibleHistory.map((sprint, sIdx) => {
+                  const colWidth = (chartWidth - padX) / visibleHistory.length;
                   const xBase = padX + sIdx * colWidth;
                   
                   const barW = Math.min(8, colWidth / 4);
@@ -1005,8 +1009,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                   </text>
 
                   {/* Barras de Velocidad e Histograma */}
-                  {validSprints.map((sprint, idx) => {
-                    const colWidth = (trendWidth - trendPadLeft - trendPadRight) / validSprints.length;
+                  {visibleTrends.map((sprint, idx) => {
+                    const colWidth = (trendWidth - trendPadLeft - trendPadRight) / visibleTrends.length;
                     const xBase = trendPadLeft + idx * colWidth;
                     
                     const barW = Math.min(24, colWidth * 0.5);
@@ -1049,8 +1053,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
                   {/* Línea de Errores Detectados (Superpuesta) */}
                   {(() => {
-                    const points = validSprints.map((sprint, idx) => {
-                      const colWidth = (trendWidth - trendPadLeft - trendPadRight) / validSprints.length;
+                    const points = visibleTrends.map((sprint, idx) => {
+                      const colWidth = (trendWidth - trendPadLeft - trendPadRight) / visibleTrends.length;
                       const xBase = trendPadLeft + idx * colWidth;
                       const x = xBase + colWidth / 2;
                       const errHeight = ((sprint.errors || 0) / maxErrorsVal) * (trendHeight - trendPadY * 2);
