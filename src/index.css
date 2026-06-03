@@ -840,3 +840,93 @@ button, input, select, textarea {
   opacity: 1;
   transform: scale(1.25);
 }
+
+/* Estilos de Impresión / Guardado en PDF */
+@media print {
+  /* Ocultar elementos de la interfaz de la aplicación */
+  .app-header,
+  .sidebar-panel,
+  .tabs-header,
+  .no-print,
+  button,
+  .btn {
+    display: none !important;
+  }
+
+  /* Desactivar fondos oscuros o degradados y forzar blanco/negro limpio */
+  body, 
+  .app-container {
+    background: #ffffff !important;
+    color: #09090b !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* El grid principal del dashboard pasa a bloque de ancho completo */
+  .dashboard-grid {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .main-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Adaptar tarjetas principales de vidrio a papel */
+  .glass-card {
+    background: #ffffff !important;
+    color: #09090b !important;
+    border: 1px solid #e4e4e7 !important;
+    box-shadow: none !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+    page-break-inside: avoid;
+  }
+
+  /* Reordenar tarjetas de métricas en 3 columnas en impresión */
+  .stat-card-group {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1.5rem !important;
+    page-break-inside: avoid;
+  }
+
+  .stat-card {
+    background: #fafafa !important;
+    color: #09090b !important;
+    border: 1px solid #e4e4e7 !important;
+    box-shadow: none !important;
+    padding: 1rem !important;
+    page-break-inside: avoid;
+  }
+
+  /* Fila de gráficos / métricas en formato de dos columnas o vertical */
+  .metrics-row-1 {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1.5rem !important;
+    page-break-inside: avoid;
+  }
+
+  /* Asegurar legibilidad del texto en los gráficos SVG */
+  svg text {
+    fill: #09090b !important;
+  }
+
+  /* Permitir la impresión exacta de colores en elementos SVG y bordes */
+  svg circle, 
+  svg line, 
+  svg path, 
+  svg rect {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}

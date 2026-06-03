@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, TrendingUp, Users, AlertTriangle, Activity, ShieldAlert, Award, ArrowUpRight, Flame, Info } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, AlertTriangle, Activity, ShieldAlert, Award, ArrowUpRight, Flame, Info, Download, FileText } from 'lucide-react';
 
 export default function SprintAnalytics({ sprints, activeSprint, logs, users, currentUser }) {
   const [viewType, setViewType] = useState('team'); // 'user' o 'team'
@@ -197,6 +197,73 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   const realSp = activeSprint?.velocity || 0;
   const predictability = estimatedSp > 0 ? (realSp / estimatedSp) * 100 : 0;
 
+  const handleExportExcel = () => {
+    // Encabezados
+    const headers = [
+      "Sprint",
+      "Fecha Inicio",
+      "Fecha Fin",
+      "Story Points Estimados",
+      "Story Points Reales (Velocidad)",
+      "Predecibilidad",
+      "Errores (Bugs)",
+      "Capacidad diaria (h/d)",
+      "Total Horas Registradas",
+      "Horas Desarrollo",
+      "Horas Reuniones",
+      "Horas Documentación"
+    ];
+    
+    // Filas
+    const rows = validSprints.map(s => {
+      const sprintLogs = logs.filter(l => l.sprintId === s.id);
+      const totals = sprintLogs.reduce((acc, log) => {
+        acc.dev += log.development;
+        acc.meet += log.meetings;
+        acc.doc += log.documentation;
+        return acc;
+      }, { dev: 0, meet: 0, doc: 0 });
+      const totalH = totals.dev + totals.meet + totals.doc;
+      const estSp = s.estimatedSp || 0;
+      const realSp = s.velocity || 0;
+      const pred = estSp > 0 ? `${((realSp / estSp) * 100).toFixed(0)}%` : "0%";
+      
+      return [
+        s.name,
+        s.startDate,
+        s.endDate,
+        estSp,
+        realSp,
+        pred,
+        s.errors || 0,
+        s.capacity || 6,
+        totalH.toFixed(1),
+        totals.dev.toFixed(1),
+        totals.meet.toFixed(1),
+        totals.doc.toFixed(1)
+      ];
+    });
+
+    const csvContent = "\ufeff" + [
+      headers.join(";"),
+      ...rows.map(r => r.join(";"))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `histograma_y_datos_sprints_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   if (!activeSprint) {
     return (
       <div className="metrics-section">
@@ -219,12 +286,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
             <span className="tooltiptext">Resumen de las horas trabajadas en desarrollo, reuniones y documentación durante el sprint.</span>
           </span>
         </h3>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <button 
             className={`btn ${viewType === 'user' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
             onClick={() => setViewType('user')}
             disabled={!currentUser}
+            title="Ver mis métricas de tiempo registradas en el sprint"
           >
             Mis Métricas
           </button>
@@ -232,8 +300,28 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
             className={`btn ${viewType === 'team' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
             onClick={() => setViewType('team')}
+            title="Ver las métricas agregadas del equipo"
           >
             Métricas del Equipo
+          </button>
+          
+          <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 0.25rem' }} className="no-print" />
+          
+          <button 
+            className="btn btn-secondary no-print"
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+            onClick={handleExportExcel}
+            title="Exportar histograma y todas las métricas de sprints a Excel (CSV)"
+          >
+            <Download size={14} /> Exportar Excel
+          </button>
+          <button 
+            className="btn btn-secondary no-print"
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+            onClick={handleExportPDF}
+            title="Exportar reporte de análisis de sprint a PDF / Imprimir"
+          >
+            <FileText size={14} /> Exportar PDF
           </button>
         </div>
       </div>
