@@ -5,7 +5,6 @@ import SprintSelector from './components/SprintSelector';
 import SprintCalendar from './components/SprintCalendar';
 import LogHoursModal from './components/LogHoursModal';
 import SprintAnalytics from './components/SprintAnalytics';
-import RetroActions from './components/RetroActions';
 import SprintManager from './components/SprintManager';
 
 import { 
@@ -17,10 +16,12 @@ import {
   createSprint, 
   updateSprintGoals, 
   fetchLogs, 
-  saveLog
+  saveLog,
+  updateSprint,
+  deleteSprint
 } from './utils/api';
 
-import { Calendar, BarChart3, CheckSquare, Settings } from 'lucide-react';
+import { Calendar, BarChart3, Settings } from 'lucide-react';
 
 export default function App() {
   const [users, setUsers] = useState([]);
@@ -68,20 +69,17 @@ export default function App() {
     loadInitialData();
   }, []);
 
-  // Cargar logs cuando cambia el sprint activo
+  // Cargar logs cuando cambia el sprint activo (ahora carga todos los logs)
   useEffect(() => {
-    if (activeSprint) {
-      loadLogs();
-    }
+    loadLogs();
   }, [activeSprint]);
 
   const loadLogs = async () => {
-    if (!activeSprint) return;
     try {
-      const loadedLogs = await fetchLogs(activeSprint.id);
+      const loadedLogs = await fetchLogs();
       setLogs(loadedLogs);
     } catch (err) {
-      console.error('Error al cargar logs del sprint:', err);
+      console.error('Error al cargar logs:', err);
     }
   };
 
@@ -142,13 +140,35 @@ export default function App() {
     }
   };
 
-  const handleUpdateGoals = async (sprintId, goalsData) => {
+  const handleUpdateSprint = async (sprintId, sprintData) => {
     try {
-      const updated = await updateSprintGoals(sprintId, goalsData);
+      const updated = await updateSprint(sprintId, sprintData);
       setSprints(sprints.map(s => s.id === sprintId ? updated : s));
-      setActiveSprint(updated);
+      if (activeSprint?.id === sprintId) {
+        setActiveSprint(updated);
+      }
     } catch (err) {
-      alert('Error al actualizar metas del sprint');
+      alert('Error al actualizar el sprint');
+    }
+  };
+
+  const handleDeleteSprint = async (sprintId) => {
+    if (!window.confirm('¿Seguro que deseas eliminar este sprint y todos sus registros de horas?')) return;
+    try {
+      await deleteSprint(sprintId);
+      const updatedSprints = sprints.filter(s => s.id !== sprintId);
+      setSprints(updatedSprints);
+      if (activeSprint?.id === sprintId) {
+        if (updatedSprints.length > 0) {
+          setActiveSprint(updatedSprints[updatedSprints.length - 1]);
+        } else {
+          setActiveSprint(null);
+        }
+      }
+      loadLogs();
+      alert('Sprint eliminado correctamente');
+    } catch (err) {
+      alert('Error al eliminar el sprint');
     }
   };
 
@@ -217,13 +237,6 @@ export default function App() {
               <BarChart3 size={16} /> Análisis de Sprint
             </button>
             <button 
-              className={`tab-btn ${activeTab === 'retro' ? 'active' : ''}`}
-              onClick={() => setActiveTab('retro')}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <CheckSquare size={16} /> Plan Retrospective
-            </button>
-            <button 
               className={`tab-btn ${activeTab === 'config' ? 'active' : ''}`}
               onClick={() => setActiveTab('config')}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
@@ -236,7 +249,7 @@ export default function App() {
           {activeTab === 'calendar' && (
             <SprintCalendar 
               activeSprint={activeSprint}
-              logs={logs}
+              logs={logs.filter(l => l.sprintId === activeSprint?.id)}
               currentUser={currentUser}
               onOpenLogModal={handleOpenLogModal}
             />
@@ -252,18 +265,13 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'retro' && (
-            <RetroActions 
-              activeSprint={activeSprint}
-            />
-          )}
-
           {activeTab === 'config' && (
             <SprintManager 
               sprints={sprints}
               activeSprint={activeSprint}
               onCreateSprint={handleCreateSprint}
-              onUpdateGoals={handleUpdateGoals}
+              onUpdateSprint={handleUpdateSprint}
+              onDeleteSprint={handleDeleteSprint}
             />
           )}
         </main>

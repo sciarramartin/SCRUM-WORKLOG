@@ -13,7 +13,9 @@
       "goals": [],
       "name": "SPRINT 2",
       "startDate": "2026-05-19",
-      "endDate": "2026-06-02"
+      "endDate": "2026-06-02",
+      "velocity": 30,
+      "errors": 3
     }
   ],
   "worklogs": [

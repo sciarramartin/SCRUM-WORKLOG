@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, TrendingUp, Users, CheckCircle, AlertTriangle } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, AlertTriangle, Activity, ShieldAlert, Award } from 'lucide-react';
 
 export default function SprintAnalytics({ sprints, activeSprint, logs, users, currentUser }) {
   const [viewType, setViewType] = useState('team'); // 'user' o 'team'
@@ -25,18 +25,17 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   // Obtener cantidad de personas que registraron horas
   const activeUsersCount = viewType === 'user' ? 1 : new Set(activeSprintLogs.map(l => l.userId)).size || 1;
 
-  // Promedios por persona (para comparar de forma justa entre sprints de distinto tamaño de equipo)
+  // Promedios por persona para el sprint activo
   const avgDev = totals.development / activeUsersCount;
   const avgMeetings = totals.meetings / activeUsersCount;
   const avgDoc = totals.documentation / activeUsersCount;
-  const avgTotal = totalHours / activeUsersCount;
 
   // Porcentajes del tiempo
   const devPct = totalHours > 0 ? (totals.development / totalHours) * 100 : 0;
   const meetPct = totalHours > 0 ? (totals.meetings / totalHours) * 100 : 0;
   const docPct = totalHours > 0 ? (totals.documentation / totalHours) * 100 : 0;
 
-  // Contar cantidad de reuniones realizadas (días distintos con reuniones registradas > 0)
+  // Contar cantidad de reuniones realizadas
   const meetingDays = new Set(
     filteredLogs
       .filter(log => log.meetings > 0)
@@ -69,36 +68,50 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     };
   });
 
-  // --- EVALUAR METAS DEL SPRINT ACTIVO ---
-  const evaluatedGoals = (activeSprint?.goals || []).map(goal => {
-    let currentValue = 0;
-    // Si la meta es grupal o individual, evaluamos según la vista seleccionada
-    // Pero la retrospectiva usualmente mide el promedio del equipo
-    const targetVal = goal.value;
+  // --- CONSOLIDACIÓN DE TENDENCIAS FINALES ---
+  const validSprints = sprints.filter(s => (s.velocity !== undefined && s.velocity > 0) || (s.errors !== undefined && s.errors > 0) || logs.some(l => l.sprintId === s.id));
+  const totalSprints = validSprints.length;
+  
+  const avgVelocity = totalSprints > 0 
+    ? (validSprints.reduce((acc, s) => acc + (s.velocity || 0), 0) / totalSprints) 
+    : 0;
     
-    if (goal.category === 'meetings') currentValue = avgMeetings;
-    else if (goal.category === 'development') currentValue = avgDev;
-    else if (goal.category === 'documentation') currentValue = avgDoc;
+  const totalErrors = validSprints.reduce((acc, s) => acc + (s.errors || 0), 0);
+  const avgErrors = totalSprints > 0 ? totalErrors / totalSprints : 0;
 
-    let isMet = false;
-    if (goal.type === 'max') {
-      isMet = currentValue <= targetVal;
-    } else {
-      isMet = currentValue >= targetVal;
-    }
+  // --- DISEÑO DE GRÁFICOS SVG ---
+  
+  // 1. Donut Chart para el tiempo del Sprint Activo
+  const radius = 50;
+  const circ = 2 * Math.PI * radius; // ~314.16
+  const strokeWidth = 14;
+  const center = 75;
 
-    return {
-      ...goal,
-      currentValue,
-      isMet
-    };
-  });
+  const devDash = (devPct / 100) * circ;
+  const meetDash = (meetPct / 100) * circ;
+  const docDash = (docPct / 100) * circ;
 
-  // SVG Chart Dimensions
+  // 2. Gráfico de Comparación de Sprints (Horas Promedio)
   const chartHeight = 160;
-  const chartWidth = 500;
-  const paddingX = 40;
-  const paddingY = 20;
+  const chartWidth = 450;
+  const padX = 40;
+  const padY = 20;
+
+  // Máximo valor para escalar las barras de horas
+  const maxHoursVal = Math.max(
+    ...sprintHistory.map(sh => Math.max(sh.avgDev, sh.avgMeetings, sh.avgDoc)),
+    8
+  );
+
+  // 3. Histograma de Tendencias (Velocidad vs Errores)
+  const trendHeight = 180;
+  const trendWidth = 560;
+  const trendPadLeft = 45;
+  const trendPadRight = 45;
+  const trendPadY = 25;
+
+  const maxVelocityVal = Math.max(...validSprints.map(s => s.velocity || 0), 10);
+  const maxErrorsVal = Math.max(...validSprints.map(s => s.errors || 0), 5);
 
   if (!activeSprint) {
     return (
@@ -178,89 +191,111 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       </div>
 
       <div className="metrics-row-1">
-        {/* Distribución y Metas */}
+        {/* Distribución del Tiempo - Donut Chart SVG */}
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <h4 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <TrendingUp size={16} style={{ color: 'var(--primary)' }} /> Distribución del Tiempo ({viewType === 'user' ? 'Mío' : 'Equipo'})
+            <TrendingUp size={16} style={{ color: 'var(--primary)' }} /> Distribución de Horas ({viewType === 'user' ? 'Mío' : 'Equipo'})
           </h4>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-dev)' }} />
-                  Desarrollo
-                </span>
-                <span className="text-muted">{totals.development.toFixed(1)}h ({devPct.toFixed(0)}%)</span>
-              </div>
-              <div style={{ height: '8px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-                <div style={{ width: `${devPct}%`, height: '100%', background: 'var(--color-dev)', borderRadius: 'var(--radius-full)' }} />
-              </div>
-            </div>
+          <div className="svg-donut-chart" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '1rem 0' }}>
+            {totalHours > 0 ? (
+              <svg width={center * 2} height={center * 2} style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
+                {/* Fondo */}
+                <circle 
+                  cx={center} cy={center} r={radius} 
+                  fill="transparent" stroke="var(--bg-primary)" strokeWidth={strokeWidth} 
+                />
+                
+                {/* Segmento Desarrollo (Azul) */}
+                {devPct > 0 && (
+                  <circle 
+                    cx={center} cy={center} r={radius} 
+                    fill="transparent" 
+                    stroke="var(--color-dev)" 
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={`${devDash} ${circ}`}
+                    strokeDashoffset={0}
+                    strokeLinecap={devPct === 100 ? 'butt' : 'round'}
+                  />
+                )}
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-meetings)' }} />
-                  Reuniones
-                </span>
-                <span className="text-muted">{totals.meetings.toFixed(1)}h ({meetPct.toFixed(0)}%)</span>
-              </div>
-              <div style={{ height: '8px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-                <div style={{ width: `${meetPct}%`, height: '100%', background: 'var(--color-meetings)', borderRadius: 'var(--radius-full)' }} />
-              </div>
-            </div>
+                {/* Segmento Reuniones (Ámbar) */}
+                {meetPct > 0 && (
+                  <circle 
+                    cx={center} cy={center} r={radius} 
+                    fill="transparent" 
+                    stroke="var(--color-meetings)" 
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={`${meetDash} ${circ}`}
+                    strokeDashoffset={-devDash}
+                    strokeLinecap="round"
+                  />
+                )}
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-doc)' }} />
-                  Documentación
-                </span>
-                <span className="text-muted">{totals.documentation.toFixed(1)}h ({docPct.toFixed(0)}%)</span>
-              </div>
-              <div style={{ height: '8px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-                <div style={{ width: `${docPct}%`, height: '100%', background: 'var(--color-doc)', borderRadius: 'var(--radius-full)' }} />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
-            <h5 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Estado de las Metas del Retrospective:</h5>
-            {evaluatedGoals.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {evaluatedGoals.map((goal, idx) => (
-                  <div 
-                    key={goal.id || idx}
-                    style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      padding: '0.5rem 0.75rem', 
-                      background: 'var(--bg-primary)', 
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.85rem'
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{goal.text}</div>
-                      <div className="text-muted" style={{ fontSize: '0.75rem' }}>
-                        Meta: {goal.type === 'max' ? 'Max' : 'Min'} {goal.value}h | Actual: {goal.currentValue.toFixed(1)}h (Promedio)
-                      </div>
-                    </div>
-                    {goal.isMet ? (
-                      <span className="badge badge-success" style={{ gap: '2px' }}><CheckCircle size={12} /> Cumplida</span>
-                    ) : (
-                      <span className="badge badge-danger" style={{ gap: '2px' }}><AlertTriangle size={12} /> Incumplida</span>
-                    )}
-                  </div>
-                ))}
-              </div>
+                {/* Segmento Documentación (Verde) */}
+                {docPct > 0 && (
+                  <circle 
+                    cx={center} cy={center} r={radius} 
+                    fill="transparent" 
+                    stroke="var(--color-doc)" 
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={`${docDash} ${circ}`}
+                    strokeDashoffset={-(devDash + meetDash)}
+                    strokeLinecap="round"
+                  />
+                )}
+                
+                {/* Texto Central */}
+                <g style={{ transform: `rotate(90deg) translate(0px, -${center * 2}px)`, transformOrigin: 'center' }}>
+                  <text x={center} y={center - 5} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: '1.25rem', fontWeight: 800, fill: 'var(--text-primary)' }}>
+                    {totalHours.toFixed(0)}h
+                  </text>
+                  <text x={center} y={center + 12} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: '0.75rem', fontWeight: 600, fill: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Registradas
+                  </text>
+                </g>
+              </svg>
             ) : (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '0.5rem', textAlign: 'center' }}>
-                Configura metas en el Administrador de Sprints para ver su avance aquí.
+              <div style={{ width: center * 2, height: center * 2, borderRadius: '50%', border: '4px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>
+                Sin datos cargados
               </div>
             )}
+
+            {/* Desglose Numérico */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', minWidth: '150px' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.2rem' }}>
+                  <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-dev)' }} />
+                    Desarrollo
+                  </span>
+                  <span className="text-secondary" style={{ fontWeight: 700 }}>{devPct.toFixed(0)}%</span>
+                </div>
+                <span className="text-muted" style={{ fontSize: '0.75rem', paddingLeft: '1.1rem' }}>{totals.development.toFixed(1)} hrs</span>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.2rem' }}>
+                  <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-meetings)' }} />
+                    Reuniones
+                  </span>
+                  <span className="text-secondary" style={{ fontWeight: 700 }}>{meetPct.toFixed(0)}%</span>
+                </div>
+                <span className="text-muted" style={{ fontSize: '0.75rem', paddingLeft: '1.1rem' }}>{totals.meetings.toFixed(1)} hrs</span>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.2rem' }}>
+                  <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-doc)' }} />
+                    Documentación
+                  </span>
+                  <span className="text-secondary" style={{ fontWeight: 700 }}>{docPct.toFixed(0)}%</span>
+                </div>
+                <span className="text-muted" style={{ fontSize: '0.75rem', paddingLeft: '1.1rem' }}>{totals.documentation.toFixed(1)} hrs</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -275,34 +310,90 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
               No hay suficientes datos históricos.
             </div>
           ) : (
-            <div className="chart-container" style={{ justifyContent: 'center' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-end', height: '180px', paddingBottom: '20px', borderBottom: '1px solid var(--border-color)', position: 'relative' }}>
-                
-                {sprintHistory.map((sprint, sIdx) => {
-                  const maxVal = Math.max(...sprintHistory.map(sh => sh.avgTotal), 10);
-                  const devHeight = (sprint.avgDev / maxVal) * 120;
-                  const meetHeight = (sprint.avgMeetings / maxVal) * 120;
-                  const docHeight = (sprint.avgDoc / maxVal) * 120;
-                  
+            <div className="chart-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <svg width="100%" height={chartHeight} style={{ overflow: 'visible' }}>
+                {/* Grid Lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
+                  const y = padY + (1 - val) * (chartHeight - padY * 2);
+                  const labelValue = (val * maxHoursVal).toFixed(0);
                   return (
-                    <div key={sprint.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '80px', gap: '0.5rem' }}>
-                      {/* Barras Apiladas */}
-                      <div style={{ display: 'flex', flexDirection: 'column-reverse', height: '120px', width: '28px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ height: `${devHeight}px`, width: '100%', background: 'var(--color-dev)' }} title={`Dev: ${sprint.avgDev.toFixed(1)}h`} />
-                        <div style={{ height: `${meetHeight}px`, width: '100%', background: 'var(--color-meetings)' }} title={`Reunión: ${sprint.avgMeetings.toFixed(1)}h`} />
-                        <div style={{ height: `${docHeight}px`, width: '100%', background: 'var(--color-doc)' }} title={`Doc: ${sprint.avgDoc.toFixed(1)}h`} />
-                      </div>
-                      
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, textAlign: 'center', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {sprint.name}
-                      </span>
-                    </div>
+                    <g key={idx}>
+                      <line 
+                        x1={padX} y1={y} x2={chartWidth} y2={y} 
+                        stroke="var(--border-color)" strokeWidth="1" strokeDasharray="3 3" 
+                      />
+                      <text x={padX - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: '0.7rem', fill: 'var(--text-muted)', fontWeight: 600 }}>
+                        {labelValue}h
+                      </text>
+                    </g>
                   );
                 })}
-              </div>
+
+                {/* Bars */}
+                {sprintHistory.map((sprint, sIdx) => {
+                  const colWidth = (chartWidth - padX) / sprintHistory.length;
+                  const xBase = padX + sIdx * colWidth;
+                  
+                  const barW = Math.min(10, colWidth / 4);
+                  const spacing = 3;
+                  
+                  const devHeight = (sprint.avgDev / maxHoursVal) * (chartHeight - padY * 2);
+                  const meetHeight = (sprint.avgMeetings / maxHoursVal) * (chartHeight - padY * 2);
+                  const docHeight = (sprint.avgDoc / maxHoursVal) * (chartHeight - padY * 2);
+                  
+                  const baselineY = chartHeight - padY;
+
+                  return (
+                    <g key={sprint.id}>
+                      {/* Desarrollo */}
+                      <rect 
+                        x={xBase + colWidth / 2 - barW * 1.5 - spacing} 
+                        y={baselineY - devHeight} 
+                        width={barW} 
+                        height={devHeight} 
+                        fill="var(--color-dev)"
+                        rx="2"
+                        title={`Dev: ${sprint.avgDev.toFixed(1)}h`}
+                      />
+
+                      {/* Reuniones */}
+                      <rect 
+                        x={xBase + colWidth / 2 - barW / 2} 
+                        y={baselineY - meetHeight} 
+                        width={barW} 
+                        height={meetHeight} 
+                        fill="var(--color-meetings)"
+                        rx="2"
+                        title={`Reunión: ${sprint.avgMeetings.toFixed(1)}h`}
+                      />
+
+                      {/* Documentación */}
+                      <rect 
+                        x={xBase + colWidth / 2 + barW / 2 + spacing} 
+                        y={baselineY - docHeight} 
+                        width={barW} 
+                        height={docHeight} 
+                        fill="var(--color-doc)"
+                        rx="2"
+                        title={`Doc: ${sprint.avgDoc.toFixed(1)}h`}
+                      />
+                      
+                      {/* Label Eje X */}
+                      <text 
+                        x={xBase + colWidth / 2} 
+                        y={chartHeight - 4} 
+                        textAnchor="middle" 
+                        style={{ fontSize: '0.7rem', fill: 'var(--text-primary)', fontWeight: 700 }}
+                      >
+                        {sprint.name.length > 8 ? sprint.name.substring(0, 7) + '..' : sprint.name}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
 
               {/* Leyenda del gráfico */}
-              <div className="chart-legend" style={{ justifyContent: 'center' }}>
+              <div className="chart-legend" style={{ justifyContent: 'center', marginTop: '0.5rem' }}>
                 <div className="legend-item">
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-dev)' }} />
                   Desarrollo
@@ -319,6 +410,209 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
             </div>
           )}
         </div>
+      </div>
+
+      {/* --- INFORME FINAL DE TENDENCIAS Y CONCLUSIÓN DEL PROYECTO --- */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '0.5rem' }}>
+        <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+            <Activity size={22} style={{ color: 'var(--primary)' }} /> Informe de Tendencias y Cierre de Proyecto
+          </h3>
+          <p className="text-secondary" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+            Consolidado histórico de desempeño del equipo. Las métricas de tendencias y calidad se compilan al final para evaluar el proyecto.
+          </p>
+        </div>
+
+        {validSprints.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            No hay suficientes sprints finalizados o configurados con métricas de tendencias (Velocidad / Errores).
+            Ingresa estos datos en la pestaña de **Configuración** de cada sprint.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'center' }}>
+            
+            {/* Panel de Resumen Consolidado */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ background: 'var(--bg-primary)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ background: 'var(--primary-light)', padding: '0.75rem', borderRadius: 'var(--radius-md)', color: 'var(--primary)' }}>
+                  <Award size={24} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Velocidad Promedio</span>
+                  <span style={{ fontSize: '1.6rem', fontWeight: 800 }}>{avgVelocity.toFixed(1)} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>pts/sprint</span></span>
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--bg-primary)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: 'var(--radius-md)', color: 'var(--danger)' }}>
+                  <ShieldAlert size={24} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Errores Consolidados</span>
+                  <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--danger)' }}>{totalErrors} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>errores</span></span>
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--bg-primary)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                <h5 style={{ fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <TrendingUp size={16} style={{ color: 'var(--success)' }} /> Conclusión de Calidad
+                </h5>
+                <p className="text-secondary" style={{ lineHeight: '1.4' }}>
+                  {avgErrors > 0 ? (
+                    avgVelocity / avgErrors > 2 ? (
+                      '✅ Tendencia Saludable: El equipo mantiene una velocidad sólida y un volumen de errores controlado por sprint.'
+                    ) : (
+                      '⚠️ Foco en Calidad: El promedio de errores por sprint es alto en relación con la velocidad. Se recomienda revisar pruebas automatizadas.'
+                    )
+                  ) : (
+                    '💎 Calidad Impecable: No se han registrado errores a lo largo de los sprints.'
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Histograma Consolidado (Double Axis SVG Chart) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', padding: '0 0.5rem' }}>
+                <span>📊 Tendencia de Estabilidad (Story Points vs Bug Rate)</span>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: '12px', height: '6px', backgroundColor: 'var(--primary)', borderRadius: '2px' }} /> Velocidad
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--danger)' }}>
+                    <span style={{ width: '12px', height: '2px', backgroundColor: 'var(--danger)', display: 'inline-block' }} /> Errores
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--bg-primary)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                <svg width="100%" height={trendHeight} style={{ overflow: 'visible' }}>
+                  
+                  {/* Grid Lines Horizontales */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
+                    const y = trendPadY + (1 - val) * (trendHeight - trendPadY * 2);
+                    return (
+                      <line 
+                        key={idx}
+                        x1={trendPadLeft} y1={y} x2={trendWidth - trendPadRight} y2={y} 
+                        stroke="var(--border-color)" strokeWidth="1" strokeDasharray="3 3" 
+                      />
+                    );
+                  })}
+
+                  {/* Ejes y Etiquetas laterales (Velocidad e Izquierda) */}
+                  <text x={trendPadLeft - 8} y={trendPadY} textAnchor="end" style={{ fontSize: '0.65rem', fill: 'var(--primary)', fontWeight: 700 }}>
+                    {maxVelocityVal} SP
+                  </text>
+                  <text x={trendPadLeft - 8} y={trendHeight - trendPadY} textAnchor="end" style={{ fontSize: '0.65rem', fill: 'var(--primary)', fontWeight: 700 }}>
+                    0 SP
+                  </text>
+
+                  {/* Ejes y Etiquetas laterales (Errores y Derecha) */}
+                  <text x={trendWidth - trendPadRight + 8} y={trendPadY} textAnchor="start" style={{ fontSize: '0.65rem', fill: 'var(--danger)', fontWeight: 700 }}>
+                    {maxErrorsVal} Err
+                  </text>
+                  <text x={trendWidth - trendPadRight + 8} y={trendHeight - trendPadY} textAnchor="start" style={{ fontSize: '0.65rem', fill: 'var(--danger)', fontWeight: 700 }}>
+                    0 Err
+                  </text>
+
+                  {/* Barras de Velocidad e Histograma */}
+                  {validSprints.map((sprint, idx) => {
+                    const colWidth = (trendWidth - trendPadLeft - trendPadRight) / validSprints.length;
+                    const xBase = trendPadLeft + idx * colWidth;
+                    
+                    const barW = Math.min(30, colWidth * 0.6);
+                    const velHeight = ((sprint.velocity || 0) / maxVelocityVal) * (trendHeight - trendPadY * 2);
+                    const baselineY = trendHeight - trendPadY;
+
+                    return (
+                      <g key={sprint.id}>
+                        {/* Barra de Velocidad */}
+                        <rect
+                          x={xBase + colWidth / 2 - barW / 2}
+                          y={baselineY - velHeight}
+                          width={barW}
+                          height={velHeight}
+                          fill="var(--primary)"
+                          opacity="0.8"
+                          rx="4"
+                        />
+                        <text
+                          x={xBase + colWidth / 2}
+                          y={baselineY - velHeight - 5}
+                          textAnchor="middle"
+                          style={{ fontSize: '0.7rem', fill: 'var(--primary)', fontWeight: 800 }}
+                        >
+                          {sprint.velocity || 0}
+                        </text>
+
+                        {/* Label de Sprint abajo */}
+                        <text
+                          x={xBase + colWidth / 2}
+                          y={trendHeight - 6}
+                          textAnchor="middle"
+                          style={{ fontSize: '0.65rem', fill: 'var(--text-secondary)', fontWeight: 600 }}
+                        >
+                          {sprint.name.length > 10 ? sprint.name.substring(0, 9) + '..' : sprint.name}
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* Línea de Errores Detectados (Superpuesta) */}
+                  {(() => {
+                    const points = validSprints.map((sprint, idx) => {
+                      const colWidth = (trendWidth - trendPadLeft - trendPadRight) / validSprints.length;
+                      const xBase = trendPadLeft + idx * colWidth;
+                      const x = xBase + colWidth / 2;
+                      const errHeight = ((sprint.errors || 0) / maxErrorsVal) * (trendHeight - trendPadY * 2);
+                      const y = trendHeight - trendPadY - errHeight;
+                      return { x, y, errors: sprint.errors || 0 };
+                    });
+
+                    if (points.length === 0) return null;
+
+                    // Crear string de ruta SVG
+                    const linePath = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+                    return (
+                      <g>
+                        {points.length > 1 && (
+                          <path 
+                            d={linePath} 
+                            fill="none" 
+                            stroke="var(--danger)" 
+                            strokeWidth="3" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                          />
+                        )}
+                        {points.map((p, idx) => (
+                          <g key={idx}>
+                            <circle 
+                              cx={p.x} cy={p.y} r="5" 
+                              fill="var(--bg-secondary)" 
+                              stroke="var(--danger)" 
+                              strokeWidth="3" 
+                            />
+                            <text
+                              x={p.x}
+                              y={p.y - 8}
+                              textAnchor="middle"
+                              style={{ fontSize: '0.7rem', fill: 'var(--danger)', fontWeight: 800 }}
+                            >
+                              {p.errors}
+                            </text>
+                          </g>
+                        ))}
+                      </g>
+                    );
+                  })()}
+                </svg>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

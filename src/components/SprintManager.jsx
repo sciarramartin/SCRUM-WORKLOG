@@ -1,21 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Plus, Save, Target, AlertCircle } from 'lucide-react';
+import { Settings, Plus, Save, Trash2, Milestone, AlertTriangle } from 'lucide-react';
 
-export default function SprintManager({ sprints, activeSprint, onCreateSprint, onUpdateGoals }) {
+export default function SprintManager({ sprints, activeSprint, onCreateSprint, onUpdateSprint, onDeleteSprint }) {
   const [newSprintName, setNewSprintName] = useState('');
   const [newStartDate, setNewStartDate] = useState('');
   const [newEndDate, setNewEndDate] = useState('');
   
-  // Metas locales
-  const [goals, setGoals] = useState([]);
-  
+  // Estado local para los sprints editables
+  const [editingSprints, setEditingSprints] = useState({});
+
   useEffect(() => {
-    if (activeSprint) {
-      setGoals(activeSprint.goals || []);
-    } else {
-      setGoals([]);
-    }
-  }, [activeSprint]);
+    // Inicializar estado de edición para cada sprint
+    const initialEditing = {};
+    sprints.forEach(s => {
+      initialEditing[s.id] = {
+        name: s.name,
+        startDate: s.startDate,
+        endDate: s.endDate,
+        velocity: s.velocity || 0,
+        errors: s.errors || 0
+      };
+    });
+    setEditingSprints(initialEditing);
+  }, [sprints]);
 
   const handleCreate = (e) => {
     e.preventDefault();
@@ -30,37 +37,29 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
     setNewEndDate('');
   };
 
-  const handleAddGoalField = () => {
-    setGoals([
-      ...goals,
-      { id: 'g-' + Date.now() + Math.random().toString(36).substr(2, 4), text: '', category: 'meetings', type: 'max', value: 8 }
-    ]);
-  };
-
-  const handleGoalChange = (id, field, value) => {
-    setGoals(goals.map(g => {
-      if (g.id === id) {
-        const updated = { ...g, [field]: value };
-        // Regenerar texto por defecto si se cambian categorías o valores
-        if (field === 'category' || field === 'type' || field === 'value') {
-          const catLabel = updated.category === 'meetings' ? 'reuniones' : 
-                           updated.category === 'development' ? 'desarrollo' : 'documentación';
-          const typeLabel = updated.type === 'max' ? 'limitar a max' : 'incrementar a min';
-          updated.text = `${typeLabel.toUpperCase()} ${updated.value}h de ${catLabel} por persona`;
-        }
-        return updated;
+  const handleFieldChange = (sprintId, field, value) => {
+    setEditingSprints(prev => ({
+      ...prev,
+      [sprintId]: {
+        ...prev[sprintId],
+        [field]: value
       }
-      return g;
     }));
   };
 
-  const handleRemoveGoal = (id) => {
-    setGoals(goals.filter(g => g.id !== id));
-  };
-
-  const handleSaveGoals = () => {
-    onUpdateGoals(activeSprint.id, goals);
-    alert('Metas del sprint guardadas correctamente');
+  const handleSave = (sprintId) => {
+    const data = editingSprints[sprintId];
+    if (!data || !data.name.trim() || !data.startDate || !data.endDate) {
+      alert('Por favor completa todos los campos del sprint.');
+      return;
+    }
+    onUpdateSprint(sprintId, {
+      ...data,
+      name: data.name.trim(),
+      velocity: parseInt(data.velocity) || 0,
+      errors: parseInt(data.errors) || 0
+    });
+    alert('Sprint actualizado correctamente.');
   };
 
   return (
@@ -72,7 +71,9 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
       <div className="sprints-manager-grid">
         {/* Panel 1: Crear Sprint */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderRight: '1px solid var(--border-color)', paddingRight: '1.5rem' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Crear Nuevo Sprint</h3>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Plus size={18} style={{ color: 'var(--success)' }} /> Crear Nuevo Sprint
+          </h3>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Nombre del Sprint</label>
@@ -115,87 +116,142 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
           </form>
         </div>
 
-        {/* Panel 2: Metas de Mejora */}
+        {/* Panel 2: Gestión de Sprints */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Target size={16} style={{ color: 'var(--primary)' }} /> Metas cuantitativas de retrospective
-            </h3>
-            {activeSprint && (
-              <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={handleAddGoalField}>
-                + Meta
-              </button>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Milestone size={18} style={{ color: 'var(--primary)' }} /> Gestión de Sprints Existentes
+          </h3>
+          <p className="text-secondary" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+            Edita los nombres, rangos de fechas o ingresa las métricas finales de cada sprint para el informe de tendencias del proyecto.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '6px' }}>
+            {sprints.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)' }}>
+                No hay sprints registrados. Crea uno a la izquierda.
+              </div>
+            ) : (
+              sprints.map(sprint => {
+                const editState = editingSprints[sprint.id] || {
+                  name: sprint.name,
+                  startDate: sprint.startDate,
+                  endDate: sprint.endDate,
+                  velocity: sprint.velocity || 0,
+                  errors: sprint.errors || 0
+                };
+                
+                const isActive = activeSprint?.id === sprint.id;
+
+                return (
+                  <div 
+                    key={sprint.id} 
+                    style={{ 
+                      padding: '1rem', 
+                      background: 'var(--bg-primary)', 
+                      borderRadius: 'var(--radius-md)', 
+                      border: isActive ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      position: 'relative'
+                    }}
+                  >
+                    {isActive && (
+                      <span className="badge badge-primary" style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', fontSize: '0.7rem' }}>
+                        Activo
+                      </span>
+                    )}
+
+                    {/* Fila 1: Nombre */}
+                    <div style={{ display: 'flex', gap: '0.5rem', paddingRight: isActive ? '4rem' : '0' }}>
+                      <div className="form-group" style={{ flexGrow: 1, marginBottom: 0, width: '100%' }}>
+                        <input
+                          type="text"
+                          className="form-control"
+                          style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', fontWeight: 600, width: '100%' }}
+                          value={editState.name}
+                          onChange={(e) => handleFieldChange(sprint.id, 'name', e.target.value)}
+                          placeholder="Nombre del Sprint"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Fila 2: Fechas */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem' }}>Inicio</label>
+                        <input
+                          type="date"
+                          className="form-control"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem' }}
+                          value={editState.startDate}
+                          onChange={(e) => handleFieldChange(sprint.id, 'startDate', e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem' }}>Fin</label>
+                        <input
+                          type="date"
+                          className="form-control"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem' }}
+                          value={editState.endDate}
+                          onChange={(e) => handleFieldChange(sprint.id, 'endDate', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Fila 3: Métricas de Cierre */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          🚀 Velocidad (pts)
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem' }}
+                          value={editState.velocity}
+                          min="0"
+                          onChange={(e) => handleFieldChange(sprint.id, 'velocity', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px', color: 'var(--danger)' }}>
+                          <AlertTriangle size={12} /> Errores
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem' }}
+                          value={editState.errors}
+                          min="0"
+                          onChange={(e) => handleFieldChange(sprint.id, 'errors', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Fila 4: Acciones */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', borderTop: '1px dashed var(--border-color)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', gap: '4px' }}
+                        onClick={() => handleSave(sprint.id)}
+                      >
+                        <Save size={14} /> Guardar
+                      </button>
+                      <button 
+                        className="btn btn-danger" 
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', gap: '4px' }}
+                        onClick={() => onDeleteSprint(sprint.id)}
+                      >
+                        <Trash2 size={14} /> Eliminar
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
-
-          {!activeSprint ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-              Selecciona o crea un sprint activo para configurar metas de mejora.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <p className="text-secondary" style={{ fontSize: '0.8rem' }}>
-                Configura métricas de mejora derivadas de tu retrospective para compararlas con los datos reales registrados.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
-                {goals.map(goal => (
-                  <div key={goal.id} className="goal-editor-row">
-                    <select
-                      className="form-control"
-                      style={{ padding: '0.4rem', fontSize: '0.8rem', width: '90px' }}
-                      value={goal.type}
-                      onChange={(e) => handleGoalChange(goal.id, 'type', e.target.value)}
-                    >
-                      <option value="max">Max (≤)</option>
-                      <option value="min">Min (≥)</option>
-                    </select>
-
-                    <input
-                      type="number"
-                      className="form-control"
-                      style={{ padding: '0.4rem', fontSize: '0.8rem', width: '55px' }}
-                      value={goal.value}
-                      onChange={(e) => handleGoalChange(goal.id, 'value', parseInt(e.target.value) || 0)}
-                      min="0"
-                      max="100"
-                    />
-
-                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>h de</span>
-
-                    <select
-                      className="form-control"
-                      style={{ padding: '0.4rem', fontSize: '0.8rem', width: '100px' }}
-                      value={goal.category}
-                      onChange={(e) => handleGoalChange(goal.id, 'category', e.target.value)}
-                    >
-                      <option value="meetings">Reuniones</option>
-                      <option value="development">Desarrollo</option>
-                      <option value="documentation">Doc</option>
-                    </select>
-
-                    <button 
-                      className="btn btn-danger" 
-                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
-                      onClick={() => handleRemoveGoal(goal.id)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {goals.length > 0 ? (
-                <button className="btn btn-primary" onClick={handleSaveGoals} style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'center', gap: '0.4rem' }}>
-                  <Save size={16} /> Guardar Metas del Sprint
-                </button>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '1rem', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Aún no has agregado metas cuantitativas.
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

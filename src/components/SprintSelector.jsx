@@ -45,43 +45,6 @@ export default function SprintSelector({ sprints, activeSprint, onSelectSprint }
             <span className="text-muted">Fin:</span>
             <span style={{ fontWeight: 600 }}>{formatDate(activeSprint.endDate)}</span>
           </div>
-
-          <div style={{ marginTop: '0.25rem' }}>
-            <h4 style={{ fontSize: '0.875rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-              <Target size={15} style={{ color: 'var(--primary)' }} /> Metas de Mejora:
-            </h4>
-            {activeSprint.goals && activeSprint.goals.length > 0 ? (
-              <ul style={{ listStyle: 'none', paddingLeft: 0, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {activeSprint.goals.map((goal, idx) => (
-                  <li 
-                    key={goal.id || idx} 
-                    style={{ 
-                      fontSize: '0.8rem', 
-                      background: 'var(--bg-primary)', 
-                      padding: '0.4rem 0.6rem', 
-                      borderRadius: 'var(--radius-sm)',
-                      borderLeft: `3px solid ${
-                        goal.category === 'meetings' ? 'var(--color-meetings)' : 
-                        goal.category === 'development' ? 'var(--color-dev)' : 
-                        goal.category === 'documentation' ? 'var(--color-doc)' : 'var(--color-other)'
-                      }`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      fontWeight: 500
-                    }}
-                  >
-                    <Award size={12} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                    <span style={{ color: 'var(--text-primary)' }}>{goal.text}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>
-                Ninguna meta configurada en este sprint.
-              </div>
-            )}
-          </div>
         </div>
       )}
     </div>

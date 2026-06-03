@@ -82,6 +82,34 @@ app.post('/api/sprints', async (req, res) => {
   }
 });
 
+app.put('/api/sprints/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, startDate, endDate, goals, velocity, errors } = req.body;
+    if (!name || !startDate || !endDate) {
+      return res.status(400).json({ error: 'Nombre, fecha de inicio y fecha de fin son requeridos' });
+    }
+    const updated = await db.updateSprint(id, { name, startDate, endDate, goals, velocity, errors });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/sprints/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await db.deleteSprint(id);
+    if (deleted) {
+      res.json({ success: true, message: 'Sprint eliminado correctamente' });
+    } else {
+      res.status(404).json({ error: 'Sprint no encontrado' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/sprints/:id/goals', async (req, res) => {
   try {
     const { id } = req.params;

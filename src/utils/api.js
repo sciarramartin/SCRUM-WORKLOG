@@ -69,6 +69,26 @@ export async function updateSprintGoals(sprintId, goals) {
   return res.json();
 }
 
+export async function updateSprint(sprintId, sprintData) {
+  const res = await fetch(`${API_BASE}/sprints/${sprintId}`, {
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(sprintData)
+  });
+  if (!res.ok) throw new Error('Error al actualizar sprint');
+  return res.json();
+}
+
+export async function deleteSprint(sprintId) {
+  const res = await fetch(`${API_BASE}/sprints/${sprintId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Error al eliminar sprint');
+  return res.json();
+}
+
+
 export async function fetchLogs(sprintId) {
   const url = sprintId ? `${API_BASE}/logs?sprintId=${sprintId}` : `${API_BASE}/logs`;
   const res = await fetch(url, {

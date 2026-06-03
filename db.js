@@ -98,6 +98,13 @@ class DB {
           result TEXT
         );
       `);
+
+      // Migración incremental para agregar las columnas de velocidad y errores
+      await this.pool.query(`
+        ALTER TABLE sprints ADD COLUMN IF NOT EXISTS velocity INT DEFAULT 0;
+        ALTER TABLE sprints ADD COLUMN IF NOT EXISTS errors INT DEFAULT 0;
+      `);
+
       console.log('✅ Tablas inicializadas en PostgreSQL correctamente.');
     } catch (err) {
       console.error('❌ Error al inicializar tablas en Postgres:', err);
@@ -192,10 +199,19 @@ class DB {
         name: row.name,
         startDate: row.start_date,
         endDate: row.end_date,
-        goals: JSON.parse(row.goals || '[]')
+        goals: JSON.parse(row.goals || '[]'),
+        velocity: parseInt(row.velocity) || 0,
+        errors: parseInt(row.errors) || 0
       }));
     }
-    return this.data.sprints;
+
+    // Inicializar velocidad y errores por defecto en memoria
+    return this.data.sprints.map(s => ({
+      velocity: 0,
+      errors: 0,
+      goals: [],
+      ...s
+    }));
   }
 
   async createSprint(sprint) {
@@ -203,13 +219,15 @@ class DB {
     const newSprint = {
       id: 'sprint-' + Date.now(),
       goals: [],
+      velocity: 0,
+      errors: 0,
       ...sprint
     };
 
     if (this.isPostgres) {
       await this.pool.query(
-        'INSERT INTO sprints (id, name, start_date, end_date, goals) VALUES ($1, $2, $3, $4, $5)',
-        [newSprint.id, newSprint.name, newSprint.startDate, newSprint.endDate, JSON.stringify(newSprint.goals)]
+        'INSERT INTO sprints (id, name, start_date, end_date, goals, velocity, errors) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [newSprint.id, newSprint.name, newSprint.startDate, newSprint.endDate, JSON.stringify(newSprint.goals), newSprint.velocity, newSprint.errors]
       );
       return newSprint;
     }
@@ -217,6 +235,83 @@ class DB {
     this.data.sprints.push(newSprint);
     await this.save();
     return newSprint;
+  }
+
+  async updateSprint(sprintId, sprintData) {
+    await this.load();
+    const velocity = parseInt(sprintData.velocity) || 0;
+    const errors = parseInt(sprintData.errors) || 0;
+    const name = sprintData.name;
+    const startDate = sprintData.startDate;
+    const endDate = sprintData.endDate;
+    const goals = sprintData.goals || [];
+
+    if (this.isPostgres) {
+      const res = await this.pool.query(
+        'UPDATE sprints SET name=$1, start_date=$2, end_date=$3, goals=$4, velocity=$5, errors=$6 WHERE id=$7 RETURNING *',
+        [name, startDate, endDate, JSON.stringify(goals), velocity, errors, sprintId]
+      );
+      if (res.rows.length > 0) {
+        const row = res.rows[0];
+        return {
+          id: row.id,
+          name: row.name,
+          startDate: row.start_date,
+          endDate: row.end_date,
+          goals: JSON.parse(row.goals || '[]'),
+          velocity: parseInt(row.velocity) || 0,
+          errors: parseInt(row.errors) || 0
+        };
+      }
+      throw new Error('Sprint no encontrado');
+    }
+
+    const sprintIndex = this.data.sprints.findIndex(s => s.id === sprintId);
+    if (sprintIndex !== -1) {
+      this.data.sprints[sprintIndex] = {
+        ...this.data.sprints[sprintIndex],
+        name,
+        startDate,
+        endDate,
+        goals,
+        velocity,
+        errors,
+        id: sprintId
+      };
+      await this.save();
+      return this.data.sprints[sprintIndex];
+    }
+    throw new Error('Sprint no encontrado');
+  }
+
+  async deleteSprint(sprintId) {
+    await this.load();
+    if (this.isPostgres) {
+      const client = await this.pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM worklogs WHERE sprint_id=$1', [sprintId]);
+        await client.query('DELETE FROM retro_actions WHERE sprint_id=$1', [sprintId]);
+        const res = await client.query('DELETE FROM sprints WHERE id=$1', [sprintId]);
+        await client.query('COMMIT');
+        return res.rowCount > 0;
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
+
+    const sprintIndex = this.data.sprints.findIndex(s => s.id === sprintId);
+    if (sprintIndex !== -1) {
+      this.data.sprints.splice(sprintIndex, 1);
+      this.data.worklogs = this.data.worklogs.filter(w => w.sprintId !== sprintId);
+      this.data.retroActions = this.data.retroActions.filter(ra => ra.sprintId !== sprintId);
+      await this.save();
+      return true;
+    }
+    return false;
   }
 
   async updateSprintGoals(sprintId, goals) {
@@ -233,7 +328,9 @@ class DB {
           name: row.name,
           startDate: row.start_date,
           endDate: row.end_date,
-          goals: JSON.parse(row.goals || '[]')
+          goals: JSON.parse(row.goals || '[]'),
+          velocity: parseInt(row.velocity) || 0,
+          errors: parseInt(row.errors) || 0
         };
       }
       throw new Error('Sprint no encontrado');
