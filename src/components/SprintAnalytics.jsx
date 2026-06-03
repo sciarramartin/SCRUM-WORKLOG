@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, TrendingUp, Users, AlertTriangle, Activity, ShieldAlert, Award, ArrowUpRight, Flame } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, AlertTriangle, Activity, ShieldAlert, Award, ArrowUpRight, Flame, Info } from 'lucide-react';
 
 export default function SprintAnalytics({ sprints, activeSprint, logs, users, currentUser }) {
   const [viewType, setViewType] = useState('team'); // 'user' o 'team'
@@ -210,6 +210,10 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem' }}>
         <h3 style={{ fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <BarChart3 size={18} className="text-secondary" /> Métricas del Ciclo
+          <span className="tooltip tooltip-left">
+            <Info size={12} style={{ color: 'var(--text-muted)' }} />
+            <span className="tooltiptext">Resumen de las horas trabajadas en desarrollo, reuniones y documentación durante el sprint.</span>
+          </span>
         </h3>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button 
@@ -233,7 +237,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       {/* Fila de Tarjetas Estadísticas */}
       <div className="stat-card-group">
         <div className="stat-card">
-          <span className="stat-label">Suma Desarrollo</span>
+          <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            Suma Desarrollo
+            <span className="tooltip tooltip-left">
+              <Info size={11} style={{ color: 'var(--text-muted)' }} />
+              <span className="tooltiptext">Total de horas cargadas a tareas de programación y resolución de código.</span>
+            </span>
+          </span>
           <span className="stat-value" style={{ color: 'var(--color-dev)' }}>
             {totals.development.toFixed(1)} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}>h</span>
           </span>
@@ -242,7 +252,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           </span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Suma Reuniones</span>
+          <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            Suma Reuniones
+            <span className="tooltip tooltip-center">
+              <Info size={11} style={{ color: 'var(--text-muted)' }} />
+              <span className="tooltiptext">Total de horas cargadas a reuniones de equipo y ceremonias Scrum.</span>
+            </span>
+          </span>
           <span className="stat-value" style={{ color: 'var(--color-meetings)' }}>
             {totals.meetings.toFixed(1)} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}>h</span>
           </span>
@@ -251,7 +267,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           </span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Suma Documentación</span>
+          <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            Suma Documentación
+            <span className="tooltip tooltip-center">
+              <Info size={11} style={{ color: 'var(--text-muted)' }} />
+              <span className="tooltiptext">Total de horas dedicadas a especificaciones, wikis y documentación de soporte.</span>
+            </span>
+          </span>
           <span className="stat-value" style={{ color: 'var(--color-doc)' }}>
             {totals.documentation.toFixed(1)} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}>h</span>
           </span>
@@ -260,7 +282,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           </span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Reuniones del Sprint</span>
+          <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            Reuniones del Sprint
+            <span className="tooltip tooltip-center">
+              <Info size={11} style={{ color: 'var(--text-muted)' }} />
+              <span className="tooltiptext">Días únicos del sprint donde se realizó al menos una reunión (basado en registros mayores a 0).</span>
+            </span>
+          </span>
           <span className="stat-value" style={{ color: 'var(--color-meetings)' }}>
             {meetingCount}
           </span>
@@ -269,7 +297,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           </span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Focus Score</span>
+          <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            Focus Score
+            <span className="tooltip tooltip-right">
+              <Info size={11} style={{ color: 'var(--text-muted)' }} />
+              <span className="tooltiptext">Cociente de horas de desarrollo frente a gestión. Si es mayor que 1.0, el foco está en programar.</span>
+            </span>
+          </span>
           <span className="stat-value" style={{ color: focusScore >= 1.0 ? 'var(--text-primary)' : 'var(--danger)' }}>
             {focusScore === Infinity ? 'Max' : focusScore.toFixed(1)}
           </span>
@@ -286,6 +320,10 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <TrendingUp size={14} /> Distribución de Horas ({viewType === 'user' ? 'Mío' : 'Equipo'})
+            <span className="tooltip tooltip-right">
+              <Info size={12} style={{ color: 'var(--text-muted)' }} />
+              <span className="tooltiptext">Muestra cómo se reparte el tiempo del sprint. Te ayuda a ver de un vistazo si hay sobrecarga de reuniones o documentación.</span>
+            </span>
           </h4>
           
           <div className="svg-donut-chart" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0.5rem 0' }}>
@@ -397,6 +435,10 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <TrendingUp size={14} /> Comparación de Sprints (Promedio por Persona)
+            <span className="tooltip tooltip-right">
+              <Info size={12} style={{ color: 'var(--text-muted)' }} />
+              <span className="tooltiptext">Compara las horas de desarrollo, reuniones y documentación promedio de cada miembro entre sprints previos.</span>
+            </span>
           </h4>
 
           {sprintHistory.length === 0 ? (
@@ -508,6 +550,10 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
             <Flame size={16} style={{ color: 'var(--warning)' }} /> Progreso de Carga & Capacidad
+            <span className="tooltip tooltip-left">
+              <Info size={12} style={{ color: 'var(--text-muted)' }} />
+              <span className="tooltiptext">Compara las horas reportadas en el sprint contra el tiempo planificado disponible del equipo.</span>
+            </span>
           </h4>
           <p className="text-secondary" style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>
             Compara el ritmo del equipo con la capacidad teórica del Sprint ({activeSprint.capacity || 6}h diarias efectivas por miembro).
@@ -535,7 +581,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         {/* Burn-down SVG Line Chart */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            <span>📉 Burn-down del Sprint (Horas Pendientes)</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              📉 Burn-down del Sprint (Horas Pendientes)
+              <span className="tooltip tooltip-right">
+                <Info size={12} style={{ color: 'var(--text-muted)' }} />
+                <span className="tooltiptext">La línea ideal (punteada) baja hacia cero. La línea real (continua) muestra las horas restantes por registrar. Si la línea real está por encima de la ideal, indica retraso.</span>
+              </span>
+            </span>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ width: '8px', height: '0px', borderTop: '2px dashed var(--text-secondary)' }} /> Ideal
@@ -648,6 +700,10 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
           <h3 style={{ fontSize: '1.05rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
             <Activity size={18} style={{ color: 'var(--primary)' }} /> Informe de Tendencias y Cierre de Proyecto
+            <span className="tooltip tooltip-left">
+              <Info size={12} style={{ color: 'var(--text-muted)' }} />
+              <span className="tooltiptext">Consolidado histórico de desempeño para evaluar la velocidad de entrega y bugs en las retrospectivas.</span>
+            </span>
           </h3>
           <p className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>
             Consolidado histórico de desempeño del equipo. Las métricas de tendencias y calidad se compilan al final para evaluar el proyecto.
@@ -687,6 +743,10 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
               <div style={{ background: 'var(--bg-primary)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
                 <h5 style={{ fontWeight: 700, marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <TrendingUp size={14} style={{ color: 'var(--success)' }} /> Coeficiente de Estabilidad
+                  <span className="tooltip tooltip-right">
+                    <Info size={12} style={{ color: 'var(--text-muted)' }} />
+                    <span className="tooltiptext">Evalúa el equilibrio entre velocidad y calidad. Si la velocidad aumenta pero los errores suben, indica alta deuda técnica.</span>
+                  </span>
                 </h5>
                 <p className="text-secondary" style={{ lineHeight: '1.45', fontSize: '0.75rem' }}>
                   {avgErrors > 0 ? (
@@ -705,7 +765,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
             {/* Histograma Consolidado (Double Axis SVG Chart) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', padding: '0 0.25rem' }}>
-                <span>📊 Rendimiento Ágil (Story Points vs Defectos)</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  📊 Rendimiento Ágil (Story Points vs Defectos)
+                  <span className="tooltip tooltip-right">
+                    <Info size={12} style={{ color: 'var(--text-muted)' }} />
+                    <span className="tooltiptext">Las barras representan la velocidad (Story Points completados) y la línea representa los errores (bugs) detectados en cada sprint.</span>
+                  </span>
+                </span>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <span style={{ width: '8px', height: '6px', backgroundColor: 'var(--primary)', borderRadius: '1px' }} /> Velocidad
