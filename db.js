@@ -404,23 +404,31 @@ class DB {
         [userId, sprintId, date]
       );
 
+      let logId;
       if (checkRes.rows.length > 0) {
         // Actualizar
-        const id = checkRes.rows[0].id;
+        logId = checkRes.rows[0].id;
         await this.pool.query(
           'UPDATE worklogs SET development=$1, meetings=$2, documentation=$3, notes=$4 WHERE id=$5',
-          [devNum, meetNum, docNum, notesStr, id]
+          [devNum, meetNum, docNum, notesStr, logId]
         );
-        return { id, userId, sprintId, date, development: devNum, meetings: meetNum, documentation: docNum, notes: notesStr };
       } else {
         // Crear
-        const id = 'log-' + Date.now() + Math.random().toString(36).substr(2, 5);
+        logId = 'log-' + Date.now() + Math.random().toString(36).substr(2, 5);
         await this.pool.query(
           'INSERT INTO worklogs (id, user_id, sprint_id, date, development, meetings, documentation, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-          [id, userId, sprintId, date, devNum, meetNum, docNum, notesStr]
+          [logId, userId, sprintId, date, devNum, meetNum, docNum, notesStr]
         );
-        return { id, userId, sprintId, date, development: devNum, meetings: meetNum, documentation: docNum, notes: notesStr };
       }
+
+      // Sincronizar meetings con TODOS los worklogs del mismo (sprint, date)
+      // para que un cambio de reunión afecte a todo el equipo
+      await this.pool.query(
+        'UPDATE worklogs SET meetings=$1 WHERE sprint_id=$2 AND date=$3',
+        [meetNum, sprintId, date]
+      );
+
+      return { id: logId, userId, sprintId, date, development: devNum, meetings: meetNum, documentation: docNum, notes: notesStr };
     }
 
     const index = this.data.worklogs.findIndex(
@@ -444,6 +452,14 @@ class DB {
       logItem.id = 'log-' + Date.now() + Math.random().toString(36).substr(2, 5);
       this.data.worklogs.push(logItem);
     }
+
+    // Sincronizar meetings con TODOS los worklogs del mismo (sprint, date)
+    // para que un cambio de reunión afecte a todo el equipo
+    this.data.worklogs.forEach(w => {
+      if (w.sprintId === sprintId && w.date === date) {
+        w.meetings = meetNum;
+      }
+    });
 
     await this.save();
     return logItem;

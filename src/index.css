@@ -317,6 +317,242 @@ button, input, select, textarea {
   }
 }
 
+/* ============================================
+   RESPONSIVE — MOBILE FIRST
+   ============================================ */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0.75rem 0.5rem;
+    gap: 1rem;
+  }
+
+  .app-header {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .brand-logo {
+    width: 28px;
+    height: 28px;
+    font-size: 0.95rem;
+  }
+
+  .brand-title h1 {
+    font-size: 0.95rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.6rem;
+  }
+
+  .tabs-header {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 0.75rem;
+  }
+
+  .tab-btn {
+    white-space: nowrap;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .glass-card {
+    padding: 0.85rem;
+  }
+
+  .main-content,
+  .sidebar-panel {
+    gap: 1rem;
+  }
+
+  /* Métricas / Analytics */
+  .stat-card {
+    padding: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.15rem;
+  }
+
+  .stat-label {
+    font-size: 0.6rem;
+  }
+
+  .chart-zoom-overlay {
+    padding: 0.5rem;
+    align-items: flex-start;
+    padding-top: 1rem;
+  }
+
+  .chart-zoom-modal {
+    padding: 1rem 0.85rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+
+  .chart-zoom-close-btn {
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  /* Modales */
+  .modal-content {
+    padding: 1.25rem 1rem;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    overflow-y: auto;
+    border-radius: var(--radius-md);
+  }
+
+  .modal-title {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .modal-close {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .hours-inputs-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  /* Calendario */
+  .calendar-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .calendar-header h2 {
+    font-size: 1.05rem !important;
+  }
+
+  .days-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .day-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .day-card .day-header {
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 50px;
+  }
+
+  .day-card .day-hours-sum {
+    font-size: 1rem;
+  }
+
+  .day-card .hours-progress-bar {
+    flex-grow: 1;
+    min-width: 60px;
+  }
+
+  .day-card .day-breakdown {
+    flex-grow: 1;
+  }
+
+  /* Sprint Manager */
+  .sprints-manager-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .sprints-manager-grid > div:first-child {
+    border-right: none !important;
+    padding-right: 0 !important;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1.5rem;
+  }
+
+  .sprints-manager-grid > div:first-child h3 {
+    font-size: 0.95rem;
+  }
+
+  /* Quitar el grid de 4 columnas de métricas de sprint en mobile, usar 2x2 */
+  .sprints-manager-grid div[style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-subtitle {
+    display: none;
+  }
+
+  .header-controls {
+    gap: 0.4rem;
+  }
+
+  .btn-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .app-container {
+    padding: 0.5rem 0.4rem;
+  }
+
+  .stat-card-group {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stat-value {
+    font-size: 1.05rem;
+  }
+
+  /* Inputs full width en mobile */
+  .form-control,
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 0.95rem;
+    padding: 0.6rem 0.75rem;
+  }
+
+  /* Botones de la modal más grandes para touch */
+  .modal-content button {
+    padding: 0.65rem 0.9rem;
+  }
+
+  /* Tooltips en mobile: solo visibles al hacer tap/focus (sin hover) */
+  .tooltip .tooltiptext {
+    pointer-events: auto;
+  }
+  .tooltip:focus-within .tooltiptext,
+  .tooltip:active .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hacer tooltips accesibles con teclado en todos los tamaños */
+.tooltip {
+  outline: none;
+}
+.tooltip:focus-within .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .main-content {
   display: flex;
   flex-direction: column;

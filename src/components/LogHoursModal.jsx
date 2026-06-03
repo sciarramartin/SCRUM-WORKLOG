@@ -89,6 +89,9 @@ export default function LogHoursModal({ isOpen, onClose, dateString, logData, on
                 value={meetings}
                 onChange={(e) => setMeetings(e.target.value)}
               />
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                🤝 Compartido con todo el equipo del sprint
+              </span>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
