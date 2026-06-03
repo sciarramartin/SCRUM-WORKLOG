@@ -18,7 +18,8 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
         startDate: s.startDate,
         endDate: s.endDate,
         velocity: s.velocity || 0,
-        errors: s.errors || 0
+        errors: s.errors || 0,
+        capacity: s.capacity || 6
       };
     });
     setEditingSprints(initialEditing);
@@ -57,7 +58,8 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
       ...data,
       name: data.name.trim(),
       velocity: parseInt(data.velocity) || 0,
-      errors: parseInt(data.errors) || 0
+      errors: parseInt(data.errors) || 0,
+      capacity: parseInt(data.capacity) || 6
     });
     alert('Sprint actualizado correctamente.');
   };
@@ -201,10 +203,10 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                     </div>
 
                     {/* Fila 3: Métricas de Cierre */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          🚀 Velocidad (pts)
+                          🚀 Vel (pts)
                         </label>
                         <input
                           type="number"
@@ -216,8 +218,22 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                         />
                       </div>
                       <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          ⚡ Cap (h/d)
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem' }}
+                          value={editState.capacity}
+                          min="1"
+                          max="24"
+                          onChange={(e) => handleFieldChange(sprint.id, 'capacity', parseInt(e.target.value) || 6)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px', color: 'var(--danger)' }}>
-                          <AlertTriangle size={12} /> Errores
+                          ⚠️ Err
                         </label>
                         <input
                           type="number"

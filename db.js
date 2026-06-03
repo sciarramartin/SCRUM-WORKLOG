@@ -99,10 +99,11 @@ class DB {
         );
       `);
 
-      // Migración incremental para agregar las columnas de velocidad y errores
+      // Migración incremental para agregar las columnas de velocidad, errores y capacidad
       await this.pool.query(`
         ALTER TABLE sprints ADD COLUMN IF NOT EXISTS velocity INT DEFAULT 0;
         ALTER TABLE sprints ADD COLUMN IF NOT EXISTS errors INT DEFAULT 0;
+        ALTER TABLE sprints ADD COLUMN IF NOT EXISTS capacity INT DEFAULT 6;
       `);
 
       console.log('✅ Tablas inicializadas en PostgreSQL correctamente.');
@@ -201,14 +202,16 @@ class DB {
         endDate: row.end_date,
         goals: JSON.parse(row.goals || '[]'),
         velocity: parseInt(row.velocity) || 0,
-        errors: parseInt(row.errors) || 0
+        errors: parseInt(row.errors) || 0,
+        capacity: parseInt(row.capacity) || 6
       }));
     }
 
-    // Inicializar velocidad y errores por defecto en memoria
+    // Inicializar velocidad, errores y capacidad por defecto en memoria
     return this.data.sprints.map(s => ({
       velocity: 0,
       errors: 0,
+      capacity: 6,
       goals: [],
       ...s
     }));
@@ -221,13 +224,14 @@ class DB {
       goals: [],
       velocity: 0,
       errors: 0,
+      capacity: 6,
       ...sprint
     };
 
     if (this.isPostgres) {
       await this.pool.query(
-        'INSERT INTO sprints (id, name, start_date, end_date, goals, velocity, errors) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-        [newSprint.id, newSprint.name, newSprint.startDate, newSprint.endDate, JSON.stringify(newSprint.goals), newSprint.velocity, newSprint.errors]
+        'INSERT INTO sprints (id, name, start_date, end_date, goals, velocity, errors, capacity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+        [newSprint.id, newSprint.name, newSprint.startDate, newSprint.endDate, JSON.stringify(newSprint.goals), newSprint.velocity, newSprint.errors, newSprint.capacity]
       );
       return newSprint;
     }
@@ -241,6 +245,7 @@ class DB {
     await this.load();
     const velocity = parseInt(sprintData.velocity) || 0;
     const errors = parseInt(sprintData.errors) || 0;
+    const capacity = parseInt(sprintData.capacity) || 6;
     const name = sprintData.name;
     const startDate = sprintData.startDate;
     const endDate = sprintData.endDate;
@@ -248,8 +253,8 @@ class DB {
 
     if (this.isPostgres) {
       const res = await this.pool.query(
-        'UPDATE sprints SET name=$1, start_date=$2, end_date=$3, goals=$4, velocity=$5, errors=$6 WHERE id=$7 RETURNING *',
-        [name, startDate, endDate, JSON.stringify(goals), velocity, errors, sprintId]
+        'UPDATE sprints SET name=$1, start_date=$2, end_date=$3, goals=$4, velocity=$5, errors=$6, capacity=$7 WHERE id=$8 RETURNING *',
+        [name, startDate, endDate, JSON.stringify(goals), velocity, errors, capacity, sprintId]
       );
       if (res.rows.length > 0) {
         const row = res.rows[0];
@@ -260,7 +265,8 @@ class DB {
           endDate: row.end_date,
           goals: JSON.parse(row.goals || '[]'),
           velocity: parseInt(row.velocity) || 0,
-          errors: parseInt(row.errors) || 0
+          errors: parseInt(row.errors) || 0,
+          capacity: parseInt(row.capacity) || 6
         };
       }
       throw new Error('Sprint no encontrado');
@@ -276,6 +282,7 @@ class DB {
         goals,
         velocity,
         errors,
+        capacity,
         id: sprintId
       };
       await this.save();
@@ -330,7 +337,8 @@ class DB {
           endDate: row.end_date,
           goals: JSON.parse(row.goals || '[]'),
           velocity: parseInt(row.velocity) || 0,
-          errors: parseInt(row.errors) || 0
+          errors: parseInt(row.errors) || 0,
+          capacity: parseInt(row.capacity) || 6
         };
       }
       throw new Error('Sprint no encontrado');
