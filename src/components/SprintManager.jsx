@@ -207,7 +207,7 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                         <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
                           🚀 Vel (pts)
                           <span className="tooltip tooltip-left">
-                            <Info size={12} style={{ color: 'var(--text-muted)' }} />
+                            <Info size={14} className="info-icon" />
                             <span className="tooltiptext">Story Points completados en este sprint para medir la velocidad real.</span>
                           </span>
                         </label>
@@ -224,7 +224,7 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                         <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
                           ⚡ Cap (h/d)
                           <span className="tooltip tooltip-center">
-                            <Info size={12} style={{ color: 'var(--text-muted)' }} />
+                            <Info size={14} className="info-icon" />
                             <span className="tooltiptext">Capacidad teórica diaria de horas efectivas por cada desarrollador.</span>
                           </span>
                         </label>
@@ -242,7 +242,7 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                         <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--danger)' }}>
                           ⚠️ Err
                           <span className="tooltip tooltip-right">
-                            <Info size={12} style={{ color: 'var(--text-muted)' }} />
+                            <Info size={14} className="info-icon" />
                             <span className="tooltiptext">Errores o defectos detectados en producción o QA durante este sprint.</span>
                           </span>
                         </label>

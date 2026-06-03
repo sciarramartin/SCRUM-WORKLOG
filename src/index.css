@@ -828,3 +828,15 @@ button, input, select, textarea {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* Iconos de Información Destacados */
+.info-icon {
+  color: #3b82f6 !important; /* Azul vibrante que resalta en ambos modos */
+  opacity: 0.85;
+  cursor: help;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+.info-icon:hover {
+  opacity: 1;
+  transform: scale(1.25);
+}
