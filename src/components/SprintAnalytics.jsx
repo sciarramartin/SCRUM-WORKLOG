@@ -41,6 +41,14 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     ? totals.development / managementHours 
     : totals.development > 0 ? Infinity : 0;
 
+  // --- REUNIONES DEL SPRINT ---
+  const meetingDates = new Set(
+    activeSprintLogs
+      .filter(log => log.meetings > 0)
+      .map(log => log.date)
+  );
+  const meetingCount = meetingDates.size;
+
   // --- CÁLCULO DE CAPACIDAD DEL EQUIPO ---
   const getSprintBusinessDaysCount = (startDateStr, endDateStr) => {
     if (!startDateStr || !endDateStr) return 0;
@@ -249,6 +257,15 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           </span>
           <span className="stat-sub">
             {viewType === 'user' ? 'Horas registradas' : `Promedio: ${avgDoc.toFixed(1)}h / pers`}
+          </span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Reuniones del Sprint</span>
+          <span className="stat-value" style={{ color: 'var(--color-meetings)' }}>
+            {meetingCount}
+          </span>
+          <span className="stat-sub">
+            Días con reunión
           </span>
         </div>
         <div className="stat-card">
