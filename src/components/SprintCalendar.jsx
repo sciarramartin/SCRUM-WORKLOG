@@ -15,21 +15,17 @@ export default function SprintCalendar({ activeSprint, logs, currentUser, onOpen
     const current = new Date(start);
     
     while (current <= end) {
-      const dayOfWeek = current.getDay();
-      // Incluimos lunes a viernes (1 a 5)
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        const year = current.getFullYear();
-        const month = String(current.getMonth() + 1).padStart(2, '0');
-        const day = String(current.getDate()).padStart(2, '0');
-        const dateString = `${year}-${month}-${day}`;
-        
-        days.push({
-          dateString,
-          dayName: current.toLocaleDateString('es-ES', { weekday: 'long' }),
-          dayNum: current.getDate(),
-          rawDate: new Date(current)
-        });
-      }
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const day = String(current.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+      
+      days.push({
+        dateString,
+        dayName: current.toLocaleDateString('es-ES', { weekday: 'long' }),
+        dayNum: current.getDate(),
+        rawDate: new Date(current)
+      });
       current.setDate(current.getDate() + 1);
     }
     return days;
@@ -37,10 +33,10 @@ export default function SprintCalendar({ activeSprint, logs, currentUser, onOpen
 
   const days = getSprintDays(activeSprint?.startDate, activeSprint?.endDate);
 
-  // Agrupar días en semanas de 5 días hábiles
+  // Agrupar días en semanas de 7 días
   const weeks = [];
-  for (let i = 0; i < days.length; i += 5) {
-    weeks.push(days.slice(i, i + 5));
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7));
   }
 
   // Calcular las horas de reunión de todo el equipo por día

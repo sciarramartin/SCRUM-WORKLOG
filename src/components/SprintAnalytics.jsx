@@ -74,8 +74,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     let count = 0;
     const current = new Date(start);
     while (current <= end) {
-      const dayOfWeek = current.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+      count++;
       current.setDate(current.getDate() + 1);
     }
     return count;
@@ -122,13 +121,10 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     const end = new Date(endParts[0], endParts[1] - 1, endParts[2]);
     const current = new Date(start);
     while (current <= end) {
-      const dayOfWeek = current.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        const year = current.getFullYear();
-        const month = String(current.getMonth() + 1).padStart(2, '0');
-        const day = String(current.getDate()).padStart(2, '0');
-        businessDaysList.push(`${year}-${month}-${day}`);
-      }
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const day = String(current.getDate()).padStart(2, '0');
+      businessDaysList.push(`${year}-${month}-${day}`);
       current.setDate(current.getDate() + 1);
     }
   }
