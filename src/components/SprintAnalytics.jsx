@@ -27,13 +27,28 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     ? activeSprintLogs.filter(l => l.userId === currentUser?.id)
     : activeSprintLogs;
 
+  // Calcular las horas de reunión de todo el equipo por día en el activeSprint
+  const activeSprintMeetingsByDay = activeSprintLogs.reduce((acc, log) => {
+    if (log.meetings > 0) {
+      acc[log.date] = Math.max(acc[log.date] || 0, log.meetings);
+    }
+    return acc;
+  }, {});
+  const activeSprintMeetingsSum = Object.values(activeSprintMeetingsByDay).reduce((sum, val) => sum + val, 0);
+
   // Calcular totales del sprint activo
   const totals = filteredLogs.reduce((acc, log) => {
     acc.development += log.development;
-    acc.meetings += log.meetings;
+    if (viewType === 'user') {
+      acc.meetings += log.meetings;
+    }
     acc.documentation += log.documentation;
     return acc;
   }, { development: 0, meetings: 0, documentation: 0 });
+
+  if (viewType === 'team') {
+    totals.meetings = activeSprintMeetingsSum;
+  }
 
   const totalHours = totals.development + totals.meetings + totals.documentation;
 
@@ -42,7 +57,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
   // Promedios por persona para el sprint activo
   const avgDev = totals.development / activeUsersCount;
-  const avgMeetings = totals.meetings / activeUsersCount;
+  const avgMeetings = viewType === 'user' ? totals.meetings : activeSprintMeetingsSum;
   const avgDoc = totals.documentation / activeUsersCount;
 
   // Porcentajes del tiempo
@@ -84,7 +99,12 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   // Capacidad por persona * miembros activos * días hábiles
   const capacityHoursPerMember = (activeSprint?.capacity || 6) * businessDaysCount;
   const teamCapacityHours = capacityHoursPerMember * activeUsersCount;
-  const capacityPercentage = teamCapacityHours > 0 ? (totalHours / teamCapacityHours) * 100 : 0;
+  
+  // Para la capacidad del equipo, comparamos contra la suma total de horas individuales (para no desvirtuar la capacidad consumida de cada miembro)
+  const capacityNumerator = viewType === 'user'
+    ? totalHours
+    : activeSprintLogs.reduce((sum, log) => sum + log.development + log.meetings + log.documentation, 0);
+  const capacityPercentage = teamCapacityHours > 0 ? (capacityNumerator / teamCapacityHours) * 100 : 0;
 
   // --- CÁLCULOS COMPARATIVOS HISTÓRICOS ---
   const sprintHistory = sprints.map(sprint => {
@@ -93,20 +113,30 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     
     const sprintTotals = sprintLogs.reduce((acc, log) => {
       acc.development += log.development;
-      acc.meetings += log.meetings;
       acc.documentation += log.documentation;
       return acc;
-    }, { development: 0, meetings: 0, documentation: 0 });
+    }, { development: 0, documentation: 0 });
 
-    const total = sprintTotals.development + sprintTotals.meetings + sprintTotals.documentation;
+    const sprintMeetingsByDay = sprintLogs.reduce((acc, log) => {
+      if (log.meetings > 0) {
+        acc[log.date] = Math.max(acc[log.date] || 0, log.meetings);
+      }
+      return acc;
+    }, {});
+    const sprintMeetingsSum = Object.values(sprintMeetingsByDay).reduce((sum, val) => sum + val, 0);
+
+    const avgDevVal = sprintTotals.development / sprintUsersCount;
+    const avgDocVal = sprintTotals.documentation / sprintUsersCount;
+    const avgMeetingsVal = sprintMeetingsSum;
+    const avgTotalVal = avgDevVal + avgMeetingsVal + avgDocVal;
 
     return {
       id: sprint.id,
       name: sprint.name,
-      avgDev: sprintTotals.development / sprintUsersCount,
-      avgMeetings: sprintTotals.meetings / sprintUsersCount,
-      avgDoc: sprintTotals.documentation / sprintUsersCount,
-      avgTotal: total / sprintUsersCount
+      avgDev: avgDevVal,
+      avgMeetings: avgMeetingsVal,
+      avgDoc: avgDocVal,
+      avgTotal: avgTotalVal
     };
   });
 
@@ -843,13 +873,23 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
     const rowsXML = validSprints.map((s, idx) => {
       const sprintLogs = logs.filter(l => l.sprintId === s.id);
+      
+      const sprintMeetingsByDay = sprintLogs.reduce((acc, log) => {
+        if (log.meetings > 0) {
+          acc[log.date] = Math.max(acc[log.date] || 0, log.meetings);
+        }
+        return acc;
+      }, {});
+      const sprintMeetingsSum = Object.values(sprintMeetingsByDay).reduce((sum, val) => sum + val, 0);
+
       const totals = sprintLogs.reduce((acc, log) => {
         acc.dev += log.development;
-        acc.meet += log.meetings;
         acc.doc += log.documentation;
         return acc;
-      }, { dev: 0, meet: 0, doc: 0 });
-      const totalH = totals.dev + totals.meet + totals.doc;
+      }, { dev: 0, doc: 0 });
+
+      const totalsMeet = sprintMeetingsSum;
+      const totalH = totals.dev + totalsMeet + totals.doc;
       const estSp = s.estimatedSp || 0;
       const realSp = s.velocity || 0;
       const pred = estSp > 0 ? `${((realSp / estSp) * 100).toFixed(0)}%` : "0%";
@@ -869,7 +909,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${s.capacity || 6}</Data></Cell>
     <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totalH.toFixed(1)}</Data></Cell>
     <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totals.dev.toFixed(1)}</Data></Cell>
-    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totals.meet.toFixed(1)}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totalsMeet.toFixed(1)}</Data></Cell>
     <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totals.doc.toFixed(1)}</Data></Cell>
    </Row>`;
     }).join("");
