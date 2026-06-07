@@ -125,18 +125,18 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     }, {});
     const sprintMeetingsSum = Object.values(sprintMeetingsByDay).reduce((sum, val) => sum + val, 0);
 
-    const avgDevVal = sprintTotals.development / sprintUsersCount;
-    const avgDocVal = sprintTotals.documentation / sprintUsersCount;
-    const avgMeetingsVal = sprintMeetingsSum;
-    const avgTotalVal = avgDevVal + avgMeetingsVal + avgDocVal;
+    const totalDevVal = sprintTotals.development;
+    const totalDocVal = sprintTotals.documentation;
+    const totalMeetingsVal = sprintMeetingsSum;
+    const totalTotalVal = totalDevVal + totalMeetingsVal + totalDocVal;
 
     return {
       id: sprint.id,
       name: sprint.name,
-      avgDev: avgDevVal,
-      avgMeetings: avgMeetingsVal,
-      avgDoc: avgDocVal,
-      avgTotal: avgTotalVal
+      totalDev: totalDevVal,
+      totalMeetings: totalMeetingsVal,
+      totalDoc: totalDocVal,
+      totalTotal: totalTotalVal
     };
   });
 
@@ -201,7 +201,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
   // Máximo valor para escalar las barras de horas
   const maxHoursVal = Math.max(
-    ...visibleHistory.map(sh => Math.max(sh.avgDev, sh.avgMeetings, sh.avgDoc)),
+    ...visibleHistory.map(sh => Math.max(sh.totalDev, sh.totalMeetings, sh.totalDoc)),
     8
   );
 
@@ -380,11 +380,11 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           </button>
         )}
         <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: isExpanded ? '1.2rem' : '0.9rem', paddingRight: isExpanded ? '0' : '2.5rem' }}>
-          <TrendingUp size={isExpanded ? 18 : 14} /> Comparación de Sprints (Promedio por Persona)
+          <TrendingUp size={isExpanded ? 18 : 14} /> Comparación de Sprints (Total Horas del Equipo)
           {!isExpanded && (
             <span className="tooltip tooltip-right">
               <Info size={20} className="info-icon" />
-              <span className="tooltiptext">Compara las horas de desarrollo, reuniones y documentación promedio de cada miembro entre sprints previos.</span>
+              <span className="tooltiptext">Compara las horas totales de desarrollo, reuniones y documentación del equipo entre sprints previos.</span>
             </span>
           )}
         </h4>
@@ -421,9 +421,9 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                 const barW = isExpanded ? Math.min(16, colWidth / 4) : Math.min(8, colWidth / 4);
                 const spacing = isExpanded ? 4 : 2;
                 
-                const devHeight = (sprint.avgDev / maxHoursVal) * (cHeight - py * 2);
-                const meetHeight = (sprint.avgMeetings / maxHoursVal) * (cHeight - py * 2);
-                const docHeight = (sprint.avgDoc / maxHoursVal) * (cHeight - py * 2);
+                const devHeight = (sprint.totalDev / maxHoursVal) * (cHeight - py * 2);
+                const meetHeight = (sprint.totalMeetings / maxHoursVal) * (cHeight - py * 2);
+                const docHeight = (sprint.totalDoc / maxHoursVal) * (cHeight - py * 2);
                 
                 const baselineY = cHeight - py;
 
