@@ -536,6 +536,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     const avgDevHistory = totalDevHistory / historySprintsCount;
     const avgMeetingsHistory = totalMeetingsHistory / historySprintsCount;
     const avgDocHistory = totalDocHistory / historySprintsCount;
+    const avgMeetingsCountHistory = totalMeetingsCount / historySprintsCount;
 
     const chartContent = (
       <div className="chart-container" style={{ flexGrow: 1, width: '100%' }}>
@@ -728,8 +729,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
               <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{avgDocHistory.toFixed(1)}h</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-              <span className="text-secondary">Reuniones Totales (cant):</span>
-              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{totalMeetingsCount}</span>
+              <span className="text-secondary">Reuniones Promedio (cant):</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{avgMeetingsCountHistory.toFixed(1)}</span>
             </div>
           </div>
         </div>
