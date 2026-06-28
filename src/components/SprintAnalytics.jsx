@@ -520,188 +520,227 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   };
 
   const renderHistoryLineChart = (isExpanded = false) => {
-    const cHeight = isExpanded ? 350 : 160;
-    const cWidth = isExpanded ? 800 : 450;
-    const pxLeft = isExpanded ? 60 : 40;
-    const pxRight = isExpanded ? 60 : 40;
+    const cHeight = isExpanded ? 350 : 180;
+    const cWidth = isExpanded ? 800 : 560;
+    const pxLeft = isExpanded ? 60 : 45;
+    const pxRight = isExpanded ? 60 : 45;
     const py = isExpanded ? 30 : 20;
+
+    // Estadísticas promedio históricas
+    const historySprintsCount = sprintHistory.length || 1;
+    const totalDevHistory = sprintHistory.reduce((sum, s) => sum + s.totalDev, 0);
+    const totalMeetingsHistory = sprintHistory.reduce((sum, s) => sum + s.totalMeetings, 0);
+    const totalDocHistory = sprintHistory.reduce((sum, s) => sum + s.totalDoc, 0);
+    const totalMeetingsCount = sprintHistory.reduce((sum, s) => sum + s.meetingsCount, 0);
+
+    const avgDevHistory = totalDevHistory / historySprintsCount;
+    const avgMeetingsHistory = totalMeetingsHistory / historySprintsCount;
+    const avgDocHistory = totalDocHistory / historySprintsCount;
+
+    const chartContent = (
+      <div className="chart-container" style={{ flexGrow: 1, width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isExpanded ? '0.85rem' : '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+          <span>📈 Evolución por Sprint</span>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '12px', height: '0px', borderTop: '2px solid var(--color-dev)' }} /> Dev
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '12px', height: '0px', borderTop: '2px solid var(--color-doc)' }} /> Doc
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '12px', height: '0px', borderTop: '2px solid var(--color-meetings)' }} /> Reuniones
+            </span>
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+          <svg viewBox={`0 0 ${cWidth} ${cHeight}`} width="100%" height="auto" style={{ maxWidth: '100%', overflow: 'visible' }}>
+            {/* Grid Lines Horizontales */}
+            {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
+              const y = py + (1 - val) * (cHeight - py * 2);
+              const labelHours = (val * maxHoursVal).toFixed(0);
+              const labelMeetings = (val * maxMeetingsCountVal).toFixed(0);
+              return (
+                <g key={idx}>
+                  <line 
+                    x1={pxLeft} y1={y} x2={cWidth - pxRight} y2={y} 
+                    stroke="var(--border-color)" strokeWidth="1" strokeDasharray="2 2" 
+                  />
+                  <text x={pxLeft - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                    {labelHours}h
+                  </text>
+                  <text x={cWidth - pxRight + 8} y={y} textAnchor="start" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                    {labelMeetings}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Trazado de líneas */}
+            {(() => {
+              const colWidth = (cWidth - pxLeft - pxRight) / Math.max(1, visibleHistory.length - 1);
+              const getX = (idx) => pxLeft + (visibleHistory.length === 1 ? (cWidth - pxLeft - pxRight) / 2 : idx * colWidth);
+              
+              const devPoints = visibleHistory.map((sprint, idx) => {
+                const x = getX(idx);
+                const y = py + (1 - (sprint.totalDev || 0) / maxHoursVal) * (cHeight - py * 2);
+                return { x, y, value: sprint.totalDev || 0 };
+              });
+
+              const docPoints = visibleHistory.map((sprint, idx) => {
+                const x = getX(idx);
+                const y = py + (1 - (sprint.totalDoc || 0) / maxHoursVal) * (cHeight - py * 2);
+                return { x, y, value: sprint.totalDoc || 0 };
+              });
+
+              const meetPoints = visibleHistory.map((sprint, idx) => {
+                const x = getX(idx);
+                const y = py + (1 - (sprint.meetingsCount || 0) / maxMeetingsCountVal) * (cHeight - py * 2);
+                return { x, y, value: sprint.meetingsCount || 0 };
+              });
+
+              const devLinePath = devPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+              const docLinePath = docPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+              const meetLinePath = meetPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+              return (
+                <g>
+                  {/* Línea de Desarrollo */}
+                  {devPoints.length > 1 && (
+                    <path 
+                      d={devLinePath} 
+                      fill="none" 
+                      stroke="var(--color-dev)" 
+                      strokeWidth={isExpanded ? "3" : "2.5"} 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                    />
+                  )}
+                  {/* Línea de Documentación */}
+                  {docPoints.length > 1 && (
+                    <path 
+                      d={docLinePath} 
+                      fill="none" 
+                      stroke="var(--color-doc)" 
+                      strokeWidth={isExpanded ? "3" : "2.5"} 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                    />
+                  )}
+                  {/* Línea de Reuniones */}
+                  {meetPoints.length > 1 && (
+                    <path 
+                      d={meetLinePath} 
+                      fill="none" 
+                      stroke="var(--color-meetings)" 
+                      strokeWidth={isExpanded ? "3" : "2.5"} 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                    />
+                  )}
+
+                  {/* Nodos y Etiquetas */}
+                  {visibleHistory.map((sprint, idx) => {
+                    const devP = devPoints[idx];
+                    const docP = docPoints[idx];
+                    const meetP = meetPoints[idx];
+
+                    return (
+                      <g key={sprint.id}>
+                        {/* Dev Node */}
+                        <circle cx={devP.x} cy={devP.y} r={isExpanded ? 5 : 4} fill="var(--bg-secondary)" stroke="var(--color-dev)" strokeWidth="2" />
+                        <text x={devP.x} y={devP.y - 8} textAnchor="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--color-dev)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                          {devP.value.toFixed(0)}h
+                        </text>
+
+                        {/* Doc Node */}
+                        <circle cx={docP.x} cy={docP.y} r={isExpanded ? 5 : 4} fill="var(--bg-secondary)" stroke="var(--color-doc)" strokeWidth="2" />
+                        <text x={docP.x} y={docP.y + 12} textAnchor="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--color-doc)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                          {docP.value.toFixed(0)}h
+                        </text>
+
+                        {/* Meetings Node */}
+                        <circle cx={meetP.x} cy={meetP.y} r={isExpanded ? 5 : 4} fill="var(--bg-secondary)" stroke="var(--color-meetings)" strokeWidth="2" />
+                        <text x={meetP.x} y={meetP.y - 8} textAnchor="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--color-meetings)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                          {meetP.value}
+                        </text>
+
+                        {/* Eje X Labels */}
+                        <text 
+                          x={devP.x} 
+                          y={cHeight - (isExpanded ? 8 : 4)} 
+                          textAnchor="middle" 
+                          style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}
+                        >
+                          {isExpanded ? sprint.name : (sprint.name.length > 8 ? sprint.name.substring(0, 7) + '..' : sprint.name)}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })()}
+          </svg>
+        </div>
+      </div>
+    );
+
+    if (isExpanded) {
+      return chartContent;
+    }
 
     return (
       <div 
-        className={isExpanded ? "" : "glass-card zoomable-chart-card"} 
-        onClick={isExpanded ? null : () => setExpandedChart('historyLine')}
-        style={isExpanded ? {} : { display: 'flex', flexDirection: 'column', gap: '1rem' }}
+        className="glass-card grid-layout-2col zoomable-chart-card" 
+        onClick={() => setExpandedChart('historyLine')}
+        style={{ cursor: 'zoom-in' }}
       >
-        {!isExpanded && (
-          <button 
-            className="chart-zoom-btn" 
-            onClick={(e) => { e.stopPropagation(); setExpandedChart('historyLine'); }}
-            aria-label="Expandir gráfico"
-            title="Expandir gráfico"
-          >
-            <Maximize2 size={14} />
-          </button>
-        )}
-        <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: isExpanded ? '1.2rem' : '0.9rem', paddingRight: isExpanded ? '0' : '2.5rem' }}>
-          <TrendingUp size={isExpanded ? 18 : 14} /> Tendencia de Esfuerzo (Horas vs Reuniones)
-          {!isExpanded && (
+        <button 
+          className="chart-zoom-btn" 
+          onClick={(e) => { e.stopPropagation(); setExpandedChart('historyLine'); }}
+          aria-label="Expandir gráfico"
+          title="Expandir gráfico"
+        >
+          <Maximize2 size={14} />
+        </button>
+
+        {/* Panel izquierdo con detalles */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem', fontSize: '0.9rem', paddingRight: '2.5rem' }}>
+            <TrendingUp size={16} /> Tendencia de Esfuerzo (Histórico)
             <span className="tooltip tooltip-right">
               <Info size={20} className="info-icon" />
-              <span className="tooltiptext">Muestra las tendencias de horas de desarrollo (azul), horas de documentación (verde) en el eje izquierdo, y cantidad de reuniones (naranja) en el eje derecho.</span>
+              <span className="tooltiptext">Compara las horas de desarrollo (azul), documentación (verde) y cantidad de reuniones (naranja) a lo largo de los sprints.</span>
             </span>
-          )}
-        </h4>
+          </h4>
+          <p className="text-secondary" style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>
+            Visualiza cómo evoluciona el tiempo invertido en cada actividad y la cantidad de reuniones a lo largo de los sprints.
+          </p>
 
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span className="text-secondary">Desarrollo Promedio:</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{avgDevHistory.toFixed(1)}h</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span className="text-secondary">Documentación Promedio:</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{avgDocHistory.toFixed(1)}h</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span className="text-secondary">Reuniones Totales (cant):</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{totalMeetingsCount}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Gráfico en el lado derecho */}
         {sprintHistory.length === 0 ? (
-          <div style={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: isExpanded ? '1.1rem' : '0.8rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>
             No hay suficientes datos históricos.
           </div>
         ) : (
-          <div className="chart-container">
-            <svg viewBox={`0 0 ${cWidth} ${cHeight}`} width="100%" height="auto" style={{ maxWidth: '100%', overflow: 'visible' }}>
-              {/* Grid Lines Horizontales */}
-              {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
-                const y = py + (1 - val) * (cHeight - py * 2);
-                const labelHours = (val * maxHoursVal).toFixed(0);
-                const labelMeetings = (val * maxMeetingsCountVal).toFixed(0);
-                return (
-                  <g key={idx}>
-                    <line 
-                      x1={pxLeft} y1={y} x2={cWidth - pxRight} y2={y} 
-                      stroke="var(--border-color)" strokeWidth="1" strokeDasharray="2 2" 
-                    />
-                    <text x={pxLeft - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                      {labelHours}h
-                    </text>
-                    <text x={cWidth - pxRight + 8} y={y} textAnchor="start" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                      {labelMeetings}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Trazado de líneas */}
-              {(() => {
-                const colWidth = (cWidth - pxLeft - pxRight) / Math.max(1, visibleHistory.length - 1);
-                const getX = (idx) => pxLeft + (visibleHistory.length === 1 ? (cWidth - pxLeft - pxRight) / 2 : idx * colWidth);
-                
-                const devPoints = visibleHistory.map((sprint, idx) => {
-                  const x = getX(idx);
-                  const y = py + (1 - (sprint.totalDev || 0) / maxHoursVal) * (cHeight - py * 2);
-                  return { x, y, value: sprint.totalDev || 0 };
-                });
-
-                const docPoints = visibleHistory.map((sprint, idx) => {
-                  const x = getX(idx);
-                  const y = py + (1 - (sprint.totalDoc || 0) / maxHoursVal) * (cHeight - py * 2);
-                  return { x, y, value: sprint.totalDoc || 0 };
-                });
-
-                const meetPoints = visibleHistory.map((sprint, idx) => {
-                  const x = getX(idx);
-                  const y = py + (1 - (sprint.meetingsCount || 0) / maxMeetingsCountVal) * (cHeight - py * 2);
-                  return { x, y, value: sprint.meetingsCount || 0 };
-                });
-
-                const devLinePath = devPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                const docLinePath = docPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                const meetLinePath = meetPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-
-                return (
-                  <g>
-                    {/* Línea de Desarrollo */}
-                    {devPoints.length > 1 && (
-                      <path 
-                        d={devLinePath} 
-                        fill="none" 
-                        stroke="var(--color-dev)" 
-                        strokeWidth={isExpanded ? "3" : "2"} 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                      />
-                    )}
-                    {/* Línea de Documentación */}
-                    {docPoints.length > 1 && (
-                      <path 
-                        d={docLinePath} 
-                        fill="none" 
-                        stroke="var(--color-doc)" 
-                        strokeWidth={isExpanded ? "3" : "2"} 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                      />
-                    )}
-                    {/* Línea de Reuniones */}
-                    {meetPoints.length > 1 && (
-                      <path 
-                        d={meetLinePath} 
-                        fill="none" 
-                        stroke="var(--color-meetings)" 
-                        strokeWidth={isExpanded ? "3" : "2"} 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                      />
-                    )}
-
-                    {/* Nodos y Etiquetas */}
-                    {visibleHistory.map((sprint, idx) => {
-                      const devP = devPoints[idx];
-                      const docP = docPoints[idx];
-                      const meetP = meetPoints[idx];
-
-                      return (
-                        <g key={sprint.id}>
-                          {/* Dev Node */}
-                          <circle cx={devP.x} cy={devP.y} r={isExpanded ? 4 : 3} fill="var(--bg-secondary)" stroke="var(--color-dev)" strokeWidth="2" />
-                          <text x={devP.x} y={devP.y - 6} textAnchor="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--color-dev)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                            {devP.value.toFixed(0)}h
-                          </text>
-
-                          {/* Doc Node */}
-                          <circle cx={docP.x} cy={docP.y} r={isExpanded ? 4 : 3} fill="var(--bg-secondary)" stroke="var(--color-doc)" strokeWidth="2" />
-                          <text x={docP.x} y={docP.y + 10} textAnchor="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--color-doc)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                            {docP.value.toFixed(0)}h
-                          </text>
-
-                          {/* Meetings Node */}
-                          <circle cx={meetP.x} cy={meetP.y} r={isExpanded ? 4 : 3} fill="var(--bg-secondary)" stroke="var(--color-meetings)" strokeWidth="2" />
-                          <text x={meetP.x} y={meetP.y - 6} textAnchor="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--color-meetings)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                            {meetP.value}
-                          </text>
-
-                          {/* Eje X Labels */}
-                          <text 
-                            x={devP.x} 
-                            y={cHeight - (isExpanded ? 8 : 4)} 
-                            textAnchor="middle" 
-                            style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-primary)', fontWeight: 700 }}
-                          >
-                            {isExpanded ? sprint.name : (sprint.name.length > 8 ? sprint.name.substring(0, 7) + '..' : sprint.name)}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </g>
-                );
-              })()}
-            </svg>
-
-            {/* Leyenda */}
-            <div className="chart-legend" style={{ justifyContent: 'center', marginTop: isExpanded ? '1rem' : '0.5rem', gap: isExpanded ? '1.5rem' : '0.75rem' }}>
-              <div className="legend-item" style={isExpanded ? { fontSize: '0.95rem' } : {}}>
-                <span style={{ width: isExpanded ? '10px' : '6px', height: isExpanded ? '10px' : '6px', borderRadius: '50%', backgroundColor: 'var(--color-dev)' }} />
-                Dev (h)
-              </div>
-              <div className="legend-item" style={isExpanded ? { fontSize: '0.95rem' } : {}}>
-                <span style={{ width: isExpanded ? '10px' : '6px', height: isExpanded ? '10px' : '6px', borderRadius: '50%', backgroundColor: 'var(--color-doc)' }} />
-                Doc (h)
-              </div>
-              <div className="legend-item" style={isExpanded ? { fontSize: '0.95rem' } : {}}>
-                <span style={{ width: isExpanded ? '10px' : '6px', height: isExpanded ? '10px' : '6px', borderRadius: '50%', backgroundColor: 'var(--color-meetings)' }} />
-                Reuniones (cant.)
-              </div>
-            </div>
-          </div>
+          chartContent
         )}
       </div>
     );
@@ -1449,11 +1488,11 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         {renderDistributionChart(false)}
 
         {/* Comparativa Histórica de Sprints */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {renderComparisonChart(false)}
-          {renderHistoryLineChart(false)}
-        </div>
+        {renderComparisonChart(false)}
       </div>
+
+      {/* --- NUEVO GRÁFICO: TENDENCIA DE ESFUERZO (HISTÓRICO) --- */}
+      {renderHistoryLineChart(false)}
 
       {/* --- NUEVO GRÁFICO: BURN-DOWN CHART (SEGUIMIENTO DE SPRINT) --- */}
       {renderBurndownChart(false)}
