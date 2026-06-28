@@ -109,7 +109,6 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   // --- CÁLCULOS COMPARATIVOS HISTÓRICOS ---
   const sprintHistory = sprints.map(sprint => {
     const sprintLogs = logs.filter(l => l.sprintId === sprint.id);
-    const sprintUsersCount = new Set(sprintLogs.map(l => l.userId)).size || 1;
     
     const sprintTotals = sprintLogs.reduce((acc, log) => {
       acc.development += log.development;
@@ -125,6 +124,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     }, {});
     const sprintMeetingsSum = Object.values(sprintMeetingsByDay).reduce((sum, val) => sum + val, 0);
 
+    const meetingDates = new Set(
+      sprintLogs
+        .filter(log => log.meetings > 0)
+        .map(log => log.date)
+    );
+    const meetingsCount = meetingDates.size;
+
     const totalDevVal = sprintTotals.development;
     const totalDocVal = sprintTotals.documentation;
     const totalMeetingsVal = sprintMeetingsSum;
@@ -136,7 +142,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       totalDev: totalDevVal,
       totalMeetings: totalMeetingsVal,
       totalDoc: totalDocVal,
-      totalTotal: totalTotalVal
+      totalTotal: totalTotalVal,
+      meetingsCount: meetingsCount
     };
   });
 
@@ -195,6 +202,16 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   const totalErrors = validSprints.reduce((acc, s) => acc + (s.errors || 0), 0);
   const avgErrors = totalSprints > 0 ? totalErrors / totalSprints : 0;
 
+  // Predecibilidad promedio de sprints con estimaciones
+  const sprintsWithEstimates = validSprints.filter(s => s.estimatedSp && s.estimatedSp > 0);
+  const avgPredictability = sprintsWithEstimates.length > 0
+    ? (sprintsWithEstimates.reduce((acc, s) => acc + ((s.velocity || 0) / s.estimatedSp), 0) / sprintsWithEstimates.length) * 100
+    : 0;
+
+  // Tasa de defectos promedio (Bugs / Story Point)
+  const totalVelocitySum = validSprints.reduce((acc, s) => acc + (s.velocity || 0), 0);
+  const defectDensity = totalVelocitySum > 0 ? totalErrors / totalVelocitySum : 0;
+
   const visibleTrends = validSprints.slice(-6);
 
   // --- DISEÑO DE GRÁFICOS SVG ---
@@ -205,7 +222,15 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     8
   );
 
-  const maxVelocityVal = Math.max(...visibleTrends.map(s => s.velocity || 0), 10);
+  const maxMeetingsCountVal = Math.max(
+    ...visibleHistory.map(sh => sh.meetingsCount || 0),
+    5
+  );
+
+  const maxVelocityVal = Math.max(
+    ...visibleTrends.map(s => Math.max(s.velocity || 0, s.estimatedSp || 0)),
+    10
+  );
   const maxErrorsVal = Math.max(...visibleTrends.map(s => s.errors || 0), 5);
 
   const estimatedSp = activeSprint?.estimatedSp || 0;
@@ -494,6 +519,194 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     );
   };
 
+  const renderHistoryLineChart = (isExpanded = false) => {
+    const cHeight = isExpanded ? 350 : 160;
+    const cWidth = isExpanded ? 800 : 450;
+    const pxLeft = isExpanded ? 60 : 40;
+    const pxRight = isExpanded ? 60 : 40;
+    const py = isExpanded ? 30 : 20;
+
+    return (
+      <div 
+        className={isExpanded ? "" : "glass-card zoomable-chart-card"} 
+        onClick={isExpanded ? null : () => setExpandedChart('historyLine')}
+        style={isExpanded ? {} : { display: 'flex', flexDirection: 'column', gap: '1rem' }}
+      >
+        {!isExpanded && (
+          <button 
+            className="chart-zoom-btn" 
+            onClick={(e) => { e.stopPropagation(); setExpandedChart('historyLine'); }}
+            aria-label="Expandir gráfico"
+            title="Expandir gráfico"
+          >
+            <Maximize2 size={14} />
+          </button>
+        )}
+        <h4 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: isExpanded ? '1.2rem' : '0.9rem', paddingRight: isExpanded ? '0' : '2.5rem' }}>
+          <TrendingUp size={isExpanded ? 18 : 14} /> Tendencia de Esfuerzo (Horas vs Reuniones)
+          {!isExpanded && (
+            <span className="tooltip tooltip-right">
+              <Info size={20} className="info-icon" />
+              <span className="tooltiptext">Muestra las tendencias de horas de desarrollo (azul), horas de documentación (verde) en el eje izquierdo, y cantidad de reuniones (naranja) en el eje derecho.</span>
+            </span>
+          )}
+        </h4>
+
+        {sprintHistory.length === 0 ? (
+          <div style={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: isExpanded ? '1.1rem' : '0.8rem' }}>
+            No hay suficientes datos históricos.
+          </div>
+        ) : (
+          <div className="chart-container">
+            <svg viewBox={`0 0 ${cWidth} ${cHeight}`} width="100%" height="auto" style={{ maxWidth: '100%', overflow: 'visible' }}>
+              {/* Grid Lines Horizontales */}
+              {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
+                const y = py + (1 - val) * (cHeight - py * 2);
+                const labelHours = (val * maxHoursVal).toFixed(0);
+                const labelMeetings = (val * maxMeetingsCountVal).toFixed(0);
+                return (
+                  <g key={idx}>
+                    <line 
+                      x1={pxLeft} y1={y} x2={cWidth - pxRight} y2={y} 
+                      stroke="var(--border-color)" strokeWidth="1" strokeDasharray="2 2" 
+                    />
+                    <text x={pxLeft - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                      {labelHours}h
+                    </text>
+                    <text x={cWidth - pxRight + 8} y={y} textAnchor="start" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                      {labelMeetings}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Trazado de líneas */}
+              {(() => {
+                const colWidth = (cWidth - pxLeft - pxRight) / Math.max(1, visibleHistory.length - 1);
+                const getX = (idx) => pxLeft + (visibleHistory.length === 1 ? (cWidth - pxLeft - pxRight) / 2 : idx * colWidth);
+                
+                const devPoints = visibleHistory.map((sprint, idx) => {
+                  const x = getX(idx);
+                  const y = py + (1 - (sprint.totalDev || 0) / maxHoursVal) * (cHeight - py * 2);
+                  return { x, y, value: sprint.totalDev || 0 };
+                });
+
+                const docPoints = visibleHistory.map((sprint, idx) => {
+                  const x = getX(idx);
+                  const y = py + (1 - (sprint.totalDoc || 0) / maxHoursVal) * (cHeight - py * 2);
+                  return { x, y, value: sprint.totalDoc || 0 };
+                });
+
+                const meetPoints = visibleHistory.map((sprint, idx) => {
+                  const x = getX(idx);
+                  const y = py + (1 - (sprint.meetingsCount || 0) / maxMeetingsCountVal) * (cHeight - py * 2);
+                  return { x, y, value: sprint.meetingsCount || 0 };
+                });
+
+                const devLinePath = devPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                const docLinePath = docPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                const meetLinePath = meetPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+                return (
+                  <g>
+                    {/* Línea de Desarrollo */}
+                    {devPoints.length > 1 && (
+                      <path 
+                        d={devLinePath} 
+                        fill="none" 
+                        stroke="var(--color-dev)" 
+                        strokeWidth={isExpanded ? "3" : "2"} 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                    )}
+                    {/* Línea de Documentación */}
+                    {docPoints.length > 1 && (
+                      <path 
+                        d={docLinePath} 
+                        fill="none" 
+                        stroke="var(--color-doc)" 
+                        strokeWidth={isExpanded ? "3" : "2"} 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                    )}
+                    {/* Línea de Reuniones */}
+                    {meetPoints.length > 1 && (
+                      <path 
+                        d={meetLinePath} 
+                        fill="none" 
+                        stroke="var(--color-meetings)" 
+                        strokeWidth={isExpanded ? "3" : "2"} 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                    )}
+
+                    {/* Nodos y Etiquetas */}
+                    {visibleHistory.map((sprint, idx) => {
+                      const devP = devPoints[idx];
+                      const docP = docPoints[idx];
+                      const meetP = meetPoints[idx];
+
+                      return (
+                        <g key={sprint.id}>
+                          {/* Dev Node */}
+                          <circle cx={devP.x} cy={devP.y} r={isExpanded ? 4 : 3} fill="var(--bg-secondary)" stroke="var(--color-dev)" strokeWidth="2" />
+                          <text x={devP.x} y={devP.y - 6} textAnchor="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--color-dev)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                            {devP.value.toFixed(0)}h
+                          </text>
+
+                          {/* Doc Node */}
+                          <circle cx={docP.x} cy={docP.y} r={isExpanded ? 4 : 3} fill="var(--bg-secondary)" stroke="var(--color-doc)" strokeWidth="2" />
+                          <text x={docP.x} y={docP.y + 10} textAnchor="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--color-doc)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                            {docP.value.toFixed(0)}h
+                          </text>
+
+                          {/* Meetings Node */}
+                          <circle cx={meetP.x} cy={meetP.y} r={isExpanded ? 4 : 3} fill="var(--bg-secondary)" stroke="var(--color-meetings)" strokeWidth="2" />
+                          <text x={meetP.x} y={meetP.y - 6} textAnchor="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--color-meetings)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                            {meetP.value}
+                          </text>
+
+                          {/* Eje X Labels */}
+                          <text 
+                            x={devP.x} 
+                            y={cHeight - (isExpanded ? 8 : 4)} 
+                            textAnchor="middle" 
+                            style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-primary)', fontWeight: 700 }}
+                          >
+                            {isExpanded ? sprint.name : (sprint.name.length > 8 ? sprint.name.substring(0, 7) + '..' : sprint.name)}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              })()}
+            </svg>
+
+            {/* Leyenda */}
+            <div className="chart-legend" style={{ justifyContent: 'center', marginTop: isExpanded ? '1rem' : '0.5rem', gap: isExpanded ? '1.5rem' : '0.75rem' }}>
+              <div className="legend-item" style={isExpanded ? { fontSize: '0.95rem' } : {}}>
+                <span style={{ width: isExpanded ? '10px' : '6px', height: isExpanded ? '10px' : '6px', borderRadius: '50%', backgroundColor: 'var(--color-dev)' }} />
+                Dev (h)
+              </div>
+              <div className="legend-item" style={isExpanded ? { fontSize: '0.95rem' } : {}}>
+                <span style={{ width: isExpanded ? '10px' : '6px', height: isExpanded ? '10px' : '6px', borderRadius: '50%', backgroundColor: 'var(--color-doc)' }} />
+                Doc (h)
+              </div>
+              <div className="legend-item" style={isExpanded ? { fontSize: '0.95rem' } : {}}>
+                <span style={{ width: isExpanded ? '10px' : '6px', height: isExpanded ? '10px' : '6px', borderRadius: '50%', backgroundColor: 'var(--color-meetings)' }} />
+                Reuniones (cant.)
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderBurndownChart = (isExpanded = false) => {
     const bHeight = isExpanded ? 350 : 180;
     const bWidth = isExpanded ? 800 : 560;
@@ -700,16 +913,19 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
             {!isExpanded && (
               <span className="tooltip tooltip-right">
                 <Info size={20} className="info-icon" />
-                <span className="tooltiptext">Las barras representan la velocidad (Story Points completados) y la línea representa los errores (bugs) detectados en cada sprint.</span>
+                <span className="tooltiptext">Muestra las tendencias de puntos estimados (gris discontinua), puntos completados (color primario continua) y los errores detectados (rojo).</span>
               </span>
             )}
           </span>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '8px', height: '6px', backgroundColor: 'var(--primary)', borderRadius: '1px' }} /> Velocidad
+              <span style={{ width: '12px', height: '0px', borderTop: '2px dashed var(--text-secondary)', display: 'inline-block' }} /> Planificado
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '12px', height: '0px', borderTop: '2px solid var(--primary)', display: 'inline-block' }} /> Entregado
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--danger)' }}>
-              <span style={{ width: '8px', height: '2px', backgroundColor: 'var(--danger)', display: 'inline-block' }} /> Errores
+              <span style={{ width: '12px', height: '0px', borderTop: '2px solid var(--danger)', display: 'inline-block' }} /> Errores
             </span>
           </div>
         </div>
@@ -745,48 +961,112 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
               0 Err
             </text>
 
-            {/* Barras de Velocidad e Histograma */}
+            {/* Etiquetas de Sprint abajo */}
             {visibleTrends.map((sprint, idx) => {
               const colWidth = (tWidth - tPadLeft - tPadRight) / visibleTrends.length;
               const xBase = tPadLeft + idx * colWidth;
-              
-              const barW = isExpanded ? Math.min(48, colWidth * 0.5) : Math.min(24, colWidth * 0.5);
-              const velHeight = ((sprint.velocity || 0) / maxVelocityVal) * (tHeight - tPadY * 2);
-              const baselineY = tHeight - tPadY;
-
               return (
-                <g key={sprint.id}>
-                  {/* Barra de Velocidad */}
-                  <rect
-                    x={xBase + colWidth / 2 - barW / 2}
-                    y={baselineY - velHeight}
-                    width={barW}
-                    height={velHeight}
-                    fill="var(--primary)"
-                    opacity="0.85"
-                    rx={isExpanded ? "4" : "2"}
-                  />
-                  <text
-                    x={xBase + colWidth / 2}
-                    y={baselineY - velHeight - 4}
-                    textAnchor="middle"
-                    style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 800 }}
-                  >
-                    {sprint.velocity || 0}
-                  </text>
-
-                  {/* Label de Sprint abajo */}
-                  <text
-                    x={xBase + colWidth / 2}
-                    y={tHeight - (isExpanded ? 6 : 4)}
-                    textAnchor="middle"
-                    style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-secondary)', fontWeight: 600 }}
-                  >
-                    {isExpanded ? sprint.name : (sprint.name.length > 10 ? sprint.name.substring(0, 9) + '..' : sprint.name)}
-                  </text>
-                </g>
+                <text
+                  key={sprint.id}
+                  x={xBase + colWidth / 2}
+                  y={tHeight - (isExpanded ? 6 : 4)}
+                  textAnchor="middle"
+                  style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-secondary)', fontWeight: 600 }}
+                >
+                  {isExpanded ? sprint.name : (sprint.name.length > 10 ? sprint.name.substring(0, 9) + '..' : sprint.name)}
+                </text>
               );
             })}
+
+            {/* Trazado de líneas de Estimado vs Entregado (SP) */}
+            {(() => {
+              const colWidth = (tWidth - tPadLeft - tPadRight) / visibleTrends.length;
+              
+              const plannedPoints = visibleTrends.map((sprint, idx) => {
+                const x = tPadLeft + idx * colWidth + colWidth / 2;
+                const height = ((sprint.estimatedSp || 0) / maxVelocityVal) * (tHeight - tPadY * 2);
+                const y = tHeight - tPadY - height;
+                return { x, y, value: sprint.estimatedSp || 0 };
+              });
+
+              const actualPoints = visibleTrends.map((sprint, idx) => {
+                const x = tPadLeft + idx * colWidth + colWidth / 2;
+                const height = ((sprint.velocity || 0) / maxVelocityVal) * (tHeight - tPadY * 2);
+                const y = tHeight - tPadY - height;
+                return { x, y, value: sprint.velocity || 0 };
+              });
+
+              const plannedLinePath = plannedPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+              const actualLinePath = actualPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+              return (
+                <g>
+                  {/* Línea Planificada (Dashed) */}
+                  {plannedPoints.length > 1 && (
+                    <path 
+                      d={plannedLinePath} 
+                      fill="none" 
+                      stroke="var(--text-secondary)" 
+                      strokeWidth={isExpanded ? "2.5" : "1.5"} 
+                      strokeDasharray="3 3"
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                    />
+                  )}
+                  {/* Línea Entregada (Solid) */}
+                  {actualPoints.length > 1 && (
+                    <path 
+                      d={actualLinePath} 
+                      fill="none" 
+                      stroke="var(--primary)" 
+                      strokeWidth={isExpanded ? "3" : "2.5"} 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                    />
+                  )}
+
+                  {/* Nodos Planificados */}
+                  {plannedPoints.map((p, idx) => (
+                    <g key={`plan-${idx}`}>
+                      <circle 
+                        cx={p.x} cy={p.y} r={isExpanded ? "4" : "3"} 
+                        fill="var(--bg-secondary)" 
+                        stroke="var(--text-secondary)" 
+                        strokeWidth="1.5" 
+                      />
+                      <text
+                        x={p.x}
+                        y={p.y - (isExpanded ? 8 : 6)}
+                        textAnchor="middle"
+                        style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}
+                      >
+                        {p.value}
+                      </text>
+                    </g>
+                  ))}
+
+                  {/* Nodos Entregados */}
+                  {actualPoints.map((p, idx) => (
+                    <g key={`act-${idx}`}>
+                      <circle 
+                        cx={p.x} cy={p.y} r={isExpanded ? "5" : "4"} 
+                        fill="var(--bg-secondary)" 
+                        stroke="var(--primary)" 
+                        strokeWidth="2.5" 
+                      />
+                      <text
+                        x={p.x}
+                        y={p.y + (isExpanded ? 14 : 10)}
+                        textAnchor="middle"
+                        style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 800 }}
+                      >
+                        {p.value}
+                      </text>
+                    </g>
+                  ))}
+                </g>
+              );
+            })()}
 
             {/* Línea de Errores Detectados (Superpuesta) */}
             {(() => {
@@ -1169,7 +1449,10 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         {renderDistributionChart(false)}
 
         {/* Comparativa Histórica de Sprints */}
-        {renderComparisonChart(false)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {renderComparisonChart(false)}
+          {renderHistoryLineChart(false)}
+        </div>
       </div>
 
       {/* --- NUEVO GRÁFICO: BURN-DOWN CHART (SEGUIMIENTO DE SPRINT) --- */}
@@ -1221,8 +1504,30 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                   <ShieldAlert size={18} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Errores Consolidados</span>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--danger)', fontFamily: 'var(--font-mono)' }}>{totalErrors} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>bugs</span></span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Promedio Errores
+                    <span className="tooltip tooltip-left">
+                      <Info size={20} className="info-icon" />
+                      <span className="tooltiptext">Cantidad promedio de errores (bugs) reportados por sprint a lo largo del histórico.</span>
+                    </span>
+                  </span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--danger)', fontFamily: 'var(--font-mono)' }}>{avgErrors.toFixed(1)} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>bugs / spr</span></span>
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--bg-primary)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ background: 'var(--success-light)', padding: '0.5rem', borderRadius: 'var(--radius-sm)', color: 'var(--success)' }}>
+                  <TrendingUp size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Predecibilidad Promedio
+                    <span className="tooltip tooltip-left">
+                      <Info size={20} className="info-icon" />
+                      <span className="tooltiptext">Promedio histórico de predecibilidad del equipo (puntos completados vs puntos estimados).</span>
+                    </span>
+                  </span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>{avgPredictability.toFixed(0)}%</span>
                 </div>
               </div>
 
@@ -1244,6 +1549,9 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                   ) : (
                     '💎 Excelente estabilidad: Cero errores registrados en los sprints activos.'
                   )}
+                  <span style={{ display: 'block', marginTop: '0.4rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    Densidad de Defectos: {defectDensity.toFixed(2)} bugs / SP
+                  </span>
                 </p>
               </div>
             </div>
@@ -1262,6 +1570,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
             </button>
             {expandedChart === 'distribution' && renderDistributionChart(true)}
             {expandedChart === 'comparison' && renderComparisonChart(true)}
+            {expandedChart === 'historyLine' && renderHistoryLineChart(true)}
             {expandedChart === 'burndown' && renderBurndownChart(true)}
             {expandedChart === 'trends' && renderTrendsChart(true)}
           </div>
