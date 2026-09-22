@@ -929,6 +929,36 @@ button, input, select, textarea {
   min-height: 200px;
 }
 
+/* Envoltorio con scroll horizontal para gráficos con historial extenso */
+.chart-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-focus) var(--bg-primary);
+}
+
+.chart-scroll-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.chart-scroll-wrapper::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+  border-radius: var(--radius-full);
+}
+
+.chart-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast);
+}
+
+.chart-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--border-focus);
+}
+
 .chart-title {
   font-size: 0.85rem;
   font-weight: 700;
@@ -1225,6 +1255,10 @@ button, input, select, textarea {
   .chart-zoom-modal,
   .chart-zoom-close-btn {
     display: none !important;
+  }
+
+  .chart-scroll-wrapper {
+    overflow: visible !important;
   }
 }
 

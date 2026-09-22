@@ -1,9 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, Activity, ShieldAlert, Award, ArrowUpRight, Flame, Info, Download, FileText, Maximize2 } from 'lucide-react';
 
 export default function SprintAnalytics({ sprints, activeSprint, logs, users, currentUser }) {
   const [viewType, setViewType] = useState('team'); // 'user' o 'team'
   const [expandedChart, setExpandedChart] = useState(null);
+
+  const comparisonScrollRef = useRef(null);
+  const historyScrollRef = useRef(null);
+  const trendsScrollRef = useRef(null);
+
+  // Auto-scroll al extremo derecho (sprints más recientes) al cargar o cambiar sprints
+  useEffect(() => {
+    const scrollToLatest = () => {
+      if (comparisonScrollRef.current) {
+        comparisonScrollRef.current.scrollLeft = comparisonScrollRef.current.scrollWidth;
+      }
+      if (historyScrollRef.current) {
+        historyScrollRef.current.scrollLeft = historyScrollRef.current.scrollWidth;
+      }
+      if (trendsScrollRef.current) {
+        trendsScrollRef.current.scrollLeft = trendsScrollRef.current.scrollWidth;
+      }
+    };
+    const timer = setTimeout(scrollToLatest, 60);
+    return () => clearTimeout(timer);
+  }, [sprints.length, expandedChart]);
 
   // Escuchar la tecla escape para cerrar el gráfico ampliado
   useEffect(() => {
@@ -147,7 +168,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     };
   });
 
-  const visibleHistory = sprintHistory.slice(-6);
+  const visibleHistory = sprintHistory;
 
   // --- DATOS DEL BURN-DOWN CHART ---
   const businessDaysList = [];
@@ -212,7 +233,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   const totalVelocitySum = validSprints.reduce((acc, s) => acc + (s.velocity || 0), 0);
   const defectDensity = totalVelocitySum > 0 ? totalErrors / totalVelocitySum : 0;
 
-  const visibleTrends = validSprints.slice(-6);
+  const visibleTrends = validSprints;
 
   // --- DISEÑO DE GRÁFICOS SVG ---
 
@@ -384,9 +405,12 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
   const renderComparisonChart = (isExpanded = false) => {
     const cHeight = isExpanded ? 350 : 160;
-    const cWidth = isExpanded ? 800 : 450;
     const px = isExpanded ? 60 : 40;
     const py = isExpanded ? 30 : 20;
+    const colItemWidth = isExpanded ? 100 : 72;
+    const baseWidth = isExpanded ? 800 : 450;
+    const cWidth = Math.max(baseWidth, px + visibleHistory.length * colItemWidth);
+    const isScrollable = cWidth > baseWidth;
 
     return (
       <div 
@@ -420,83 +444,99 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           </div>
         ) : (
           <div className="chart-container">
-            <svg viewBox={`0 0 ${cWidth} ${cHeight}`} width="100%" height="auto" style={{ maxWidth: '100%', overflow: 'visible' }}>
-              {/* Grid Lines */}
-              {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
-                const y = py + (1 - val) * (cHeight - py * 2);
-                const labelValue = (val * maxHoursVal).toFixed(0);
-                return (
-                  <g key={idx}>
-                    <line 
-                      x1={px} y1={y} x2={cWidth} y2={y} 
-                      stroke="var(--border-color)" strokeWidth="1" strokeDasharray="2 2" 
-                    />
-                    <text x={px - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                      {labelValue}h
-                    </text>
-                  </g>
-                );
-              })}
+            <div 
+              className="chart-scroll-wrapper"
+              ref={isExpanded ? null : comparisonScrollRef}
+            >
+              <svg 
+                viewBox={`0 0 ${cWidth} ${cHeight}`} 
+                width={cWidth} 
+                height={cHeight} 
+                style={{ 
+                  width: isScrollable ? `${cWidth}px` : '100%', 
+                  minWidth: isScrollable ? `${cWidth}px` : '100%', 
+                  height: 'auto', 
+                  overflow: 'visible',
+                  display: 'block'
+                }}
+              >
+                {/* Grid Lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
+                  const y = py + (1 - val) * (cHeight - py * 2);
+                  const labelValue = (val * maxHoursVal).toFixed(0);
+                  return (
+                    <g key={idx}>
+                      <line 
+                        x1={px} y1={y} x2={cWidth} y2={y} 
+                        stroke="var(--border-color)" strokeWidth="1" strokeDasharray="2 2" 
+                      />
+                      <text x={px - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                        {labelValue}h
+                      </text>
+                    </g>
+                  );
+                })}
 
-              {/* Bars */}
-              {visibleHistory.map((sprint, sIdx) => {
-                const colWidth = (cWidth - px) / visibleHistory.length;
-                const xBase = px + sIdx * colWidth;
-                
-                const barW = isExpanded ? Math.min(16, colWidth / 4) : Math.min(8, colWidth / 4);
-                const spacing = isExpanded ? 4 : 2;
-                
-                const devHeight = (sprint.totalDev / maxHoursVal) * (cHeight - py * 2);
-                const meetHeight = (sprint.totalMeetings / maxHoursVal) * (cHeight - py * 2);
-                const docHeight = (sprint.totalDoc / maxHoursVal) * (cHeight - py * 2);
-                
-                const baselineY = cHeight - py;
+                {/* Bars */}
+                {visibleHistory.map((sprint, sIdx) => {
+                  const colWidth = (cWidth - px) / visibleHistory.length;
+                  const xBase = px + sIdx * colWidth;
+                  
+                  const barW = isExpanded ? Math.min(18, colWidth / 4) : Math.min(12, colWidth / 4);
+                  const spacing = isExpanded ? 4 : 2;
+                  
+                  const devHeight = (sprint.totalDev / maxHoursVal) * (cHeight - py * 2);
+                  const meetHeight = (sprint.totalMeetings / maxHoursVal) * (cHeight - py * 2);
+                  const docHeight = (sprint.totalDoc / maxHoursVal) * (cHeight - py * 2);
+                  
+                  const baselineY = cHeight - py;
 
-                return (
-                  <g key={sprint.id}>
-                    {/* Desarrollo */}
-                    <rect 
-                      x={xBase + colWidth / 2 - barW * 1.5 - spacing} 
-                      y={baselineY - devHeight} 
-                      width={barW} 
-                      height={devHeight} 
-                      fill="var(--color-dev)"
-                      rx={isExpanded ? "2" : "1"}
-                    />
+                  return (
+                    <g key={sprint.id}>
+                      {/* Desarrollo */}
+                      <rect 
+                        x={xBase + colWidth / 2 - barW * 1.5 - spacing} 
+                        y={baselineY - devHeight} 
+                        width={barW} 
+                        height={devHeight} 
+                        fill="var(--color-dev)"
+                        rx={isExpanded ? "2" : "1"}
+                      />
 
-                    {/* Reuniones */}
-                    <rect 
-                      x={xBase + colWidth / 2 - barW / 2} 
-                      y={baselineY - meetHeight} 
-                      width={barW} 
-                      height={meetHeight} 
-                      fill="var(--color-meetings)"
-                      rx={isExpanded ? "2" : "1"}
-                    />
+                      {/* Reuniones */}
+                      <rect 
+                        x={xBase + colWidth / 2 - barW / 2} 
+                        y={baselineY - meetHeight} 
+                        width={barW} 
+                        height={meetHeight} 
+                        fill="var(--color-meetings)"
+                        rx={isExpanded ? "2" : "1"}
+                      />
 
-                    {/* Documentación */}
-                    <rect 
-                      x={xBase + colWidth / 2 + barW / 2 + spacing} 
-                      y={baselineY - docHeight} 
-                      width={barW} 
-                      height={docHeight} 
-                      fill="var(--color-doc)"
-                      rx={isExpanded ? "2" : "1"}
-                    />
-                    
-                    {/* Label Eje X */}
-                    <text 
-                      x={xBase + colWidth / 2} 
-                      y={cHeight - (isExpanded ? 8 : 4)} 
-                      textAnchor="middle" 
-                      style={{ fontSize: isExpanded ? '0.85rem' : '0.65rem', fill: 'var(--text-primary)', fontWeight: 700 }}
-                    >
-                      {isExpanded ? sprint.name : (sprint.name.length > 8 ? sprint.name.substring(0, 7) + '..' : sprint.name)}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
+                      {/* Documentación */}
+                      <rect 
+                        x={xBase + colWidth / 2 + barW / 2 + spacing} 
+                        y={baselineY - docHeight} 
+                        width={barW} 
+                        height={docHeight} 
+                        fill="var(--color-doc)"
+                        rx={isExpanded ? "2" : "1"}
+                      />
+                      
+                      {/* Label Eje X */}
+                      <text 
+                        x={xBase + colWidth / 2} 
+                        y={cHeight - (isExpanded ? 8 : 4)} 
+                        textAnchor="middle" 
+                        style={{ fontSize: isExpanded ? '0.85rem' : '0.65rem', fill: 'var(--text-primary)', fontWeight: 700 }}
+                      >
+                        {isExpanded ? sprint.name : (sprint.name.length > 9 ? sprint.name.substring(0, 8) + '..' : sprint.name)}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
 
             {/* Leyenda del gráfico */}
             <div className="chart-legend" style={{ justifyContent: 'center', marginTop: isExpanded ? '1rem' : '0.5rem', gap: isExpanded ? '1.5rem' : '0.75rem' }}>
@@ -512,6 +552,11 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
                 <span style={{ width: isExpanded ? '10px' : '6px', height: isExpanded ? '10px' : '6px', borderRadius: '50%', backgroundColor: 'var(--color-doc)' }} />
                 Doc
               </div>
+              {isScrollable && (
+                <div className="legend-item" style={{ marginLeft: 'auto', fontSize: isExpanded ? '0.85rem' : '0.7rem', color: 'var(--text-secondary)' }}>
+                  ↔ Desliza para ver más
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -521,10 +566,14 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
   const renderHistoryLineChart = (isExpanded = false) => {
     const cHeight = isExpanded ? 350 : 180;
-    const cWidth = isExpanded ? 800 : 560;
     const pxLeft = isExpanded ? 60 : 45;
     const pxRight = isExpanded ? 60 : 45;
     const py = isExpanded ? 30 : 20;
+    const itemWidth = isExpanded ? 120 : 85;
+    const baseWidth = isExpanded ? 800 : 560;
+
+    const cWidth = Math.max(baseWidth, pxLeft + pxRight + Math.max(1, visibleHistory.length - 1) * itemWidth);
+    const isScrollable = cWidth > baseWidth;
 
     // Estadísticas promedio históricas
     const historySprintsCount = sprintHistory.length || 1;
@@ -540,8 +589,15 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
     const chartContent = (
       <div className="chart-container" style={{ flexGrow: 1, width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isExpanded ? '0.85rem' : '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-          <span>📈 Evolución por Sprint</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isExpanded ? '0.85rem' : '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem', alignItems: 'center' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>📈 Evolución por Sprint</span>
+            {isScrollable && (
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
+                (↔ Desliza para ver más)
+              </span>
+            )}
+          </span>
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span style={{ width: '12px', height: '0px', borderTop: '2px solid var(--color-dev)' }} /> Dev
@@ -556,133 +612,149 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         </div>
 
         <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-          <svg viewBox={`0 0 ${cWidth} ${cHeight}`} width="100%" height="auto" style={{ maxWidth: '100%', overflow: 'visible' }}>
-            {/* Grid Lines Horizontales */}
-            {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
-              const y = py + (1 - val) * (cHeight - py * 2);
-              const labelHours = (val * maxHoursVal).toFixed(0);
-              const labelMeetings = (val * maxMeetingsCountVal).toFixed(0);
-              return (
-                <g key={idx}>
-                  <line 
-                    x1={pxLeft} y1={y} x2={cWidth - pxRight} y2={y} 
-                    stroke="var(--border-color)" strokeWidth="1" strokeDasharray="2 2" 
-                  />
-                  <text x={pxLeft - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                    {labelHours}h
-                  </text>
-                  <text x={cWidth - pxRight + 8} y={y} textAnchor="start" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                    {labelMeetings}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Trazado de líneas */}
-            {(() => {
-              const colWidth = (cWidth - pxLeft - pxRight) / Math.max(1, visibleHistory.length - 1);
-              const getX = (idx) => pxLeft + (visibleHistory.length === 1 ? (cWidth - pxLeft - pxRight) / 2 : idx * colWidth);
-              
-              const devPoints = visibleHistory.map((sprint, idx) => {
-                const x = getX(idx);
-                const y = py + (1 - (sprint.totalDev || 0) / maxHoursVal) * (cHeight - py * 2);
-                return { x, y, value: sprint.totalDev || 0 };
-              });
-
-              const docPoints = visibleHistory.map((sprint, idx) => {
-                const x = getX(idx);
-                const y = py + (1 - (sprint.totalDoc || 0) / maxHoursVal) * (cHeight - py * 2);
-                return { x, y, value: sprint.totalDoc || 0 };
-              });
-
-              const meetPoints = visibleHistory.map((sprint, idx) => {
-                const x = getX(idx);
-                const y = py + (1 - (sprint.meetingsCount || 0) / maxMeetingsCountVal) * (cHeight - py * 2);
-                return { x, y, value: sprint.meetingsCount || 0 };
-              });
-
-              const devLinePath = devPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-              const docLinePath = docPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-              const meetLinePath = meetPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-
-              return (
-                <g>
-                  {/* Línea de Desarrollo */}
-                  {devPoints.length > 1 && (
-                    <path 
-                      d={devLinePath} 
-                      fill="none" 
-                      stroke="var(--color-dev)" 
-                      strokeWidth={isExpanded ? "3" : "2.5"} 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
+          <div 
+            className="chart-scroll-wrapper"
+            ref={isExpanded ? null : historyScrollRef}
+          >
+            <svg 
+              viewBox={`0 0 ${cWidth} ${cHeight}`} 
+              width={cWidth} 
+              height={cHeight} 
+              style={{ 
+                width: isScrollable ? `${cWidth}px` : '100%', 
+                minWidth: isScrollable ? `${cWidth}px` : '100%', 
+                height: 'auto', 
+                overflow: 'visible',
+                display: 'block' 
+              }}
+            >
+              {/* Grid Lines Horizontales */}
+              {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
+                const y = py + (1 - val) * (cHeight - py * 2);
+                const labelHours = (val * maxHoursVal).toFixed(0);
+                const labelMeetings = (val * maxMeetingsCountVal).toFixed(0);
+                return (
+                  <g key={idx}>
+                    <line 
+                      x1={pxLeft} y1={y} x2={cWidth - pxRight} y2={y} 
+                      stroke="var(--border-color)" strokeWidth="1" strokeDasharray="2 2" 
                     />
-                  )}
-                  {/* Línea de Documentación */}
-                  {docPoints.length > 1 && (
-                    <path 
-                      d={docLinePath} 
-                      fill="none" 
-                      stroke="var(--color-doc)" 
-                      strokeWidth={isExpanded ? "3" : "2.5"} 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                    />
-                  )}
-                  {/* Línea de Reuniones */}
-                  {meetPoints.length > 1 && (
-                    <path 
-                      d={meetLinePath} 
-                      fill="none" 
-                      stroke="var(--color-meetings)" 
-                      strokeWidth={isExpanded ? "3" : "2.5"} 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                    />
-                  )}
+                    <text x={pxLeft - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                      {labelHours}h
+                    </text>
+                    <text x={cWidth - pxRight + 8} y={y} textAnchor="start" dominantBaseline="middle" style={{ fontSize: isExpanded ? '0.75rem' : '0.6rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                      {labelMeetings}
+                    </text>
+                  </g>
+                );
+              })}
 
-                  {/* Nodos y Etiquetas */}
-                  {visibleHistory.map((sprint, idx) => {
-                    const devP = devPoints[idx];
-                    const docP = docPoints[idx];
-                    const meetP = meetPoints[idx];
+              {/* Trazado de líneas */}
+              {(() => {
+                const colWidth = (cWidth - pxLeft - pxRight) / Math.max(1, visibleHistory.length - 1);
+                const getX = (idx) => pxLeft + (visibleHistory.length === 1 ? (cWidth - pxLeft - pxRight) / 2 : idx * colWidth);
+                
+                const devPoints = visibleHistory.map((sprint, idx) => {
+                  const x = getX(idx);
+                  const y = py + (1 - (sprint.totalDev || 0) / maxHoursVal) * (cHeight - py * 2);
+                  return { x, y, value: sprint.totalDev || 0 };
+                });
 
-                    return (
-                      <g key={sprint.id}>
-                        {/* Dev Node */}
-                        <circle cx={devP.x} cy={devP.y} r={isExpanded ? 5 : 4} fill="var(--bg-secondary)" stroke="var(--color-dev)" strokeWidth="2" />
-                        <text x={devP.x} y={devP.y - 8} textAnchor="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--color-dev)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                          {devP.value.toFixed(0)}h
-                        </text>
+                const docPoints = visibleHistory.map((sprint, idx) => {
+                  const x = getX(idx);
+                  const y = py + (1 - (sprint.totalDoc || 0) / maxHoursVal) * (cHeight - py * 2);
+                  return { x, y, value: sprint.totalDoc || 0 };
+                });
 
-                        {/* Doc Node */}
-                        <circle cx={docP.x} cy={docP.y} r={isExpanded ? 5 : 4} fill="var(--bg-secondary)" stroke="var(--color-doc)" strokeWidth="2" />
-                        <text x={docP.x} y={docP.y + 12} textAnchor="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--color-doc)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                          {docP.value.toFixed(0)}h
-                        </text>
+                const meetPoints = visibleHistory.map((sprint, idx) => {
+                  const x = getX(idx);
+                  const y = py + (1 - (sprint.meetingsCount || 0) / maxMeetingsCountVal) * (cHeight - py * 2);
+                  return { x, y, value: sprint.meetingsCount || 0 };
+                });
 
-                        {/* Meetings Node */}
-                        <circle cx={meetP.x} cy={meetP.y} r={isExpanded ? 5 : 4} fill="var(--bg-secondary)" stroke="var(--color-meetings)" strokeWidth="2" />
-                        <text x={meetP.x} y={meetP.y - 8} textAnchor="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--color-meetings)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                          {meetP.value}
-                        </text>
+                const devLinePath = devPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                const docLinePath = docPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                const meetLinePath = meetPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
-                        {/* Eje X Labels */}
-                        <text 
-                          x={devP.x} 
-                          y={cHeight - (isExpanded ? 8 : 4)} 
-                          textAnchor="middle" 
-                          style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}
-                        >
-                          {isExpanded ? sprint.name : (sprint.name.length > 8 ? sprint.name.substring(0, 7) + '..' : sprint.name)}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </g>
-              );
-            })()}
-          </svg>
+                return (
+                  <g>
+                    {/* Línea de Desarrollo */}
+                    {devPoints.length > 1 && (
+                      <path 
+                        d={devLinePath} 
+                        fill="none" 
+                        stroke="var(--color-dev)" 
+                        strokeWidth={isExpanded ? "3" : "2.5"} 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                    )}
+                    {/* Línea de Documentación */}
+                    {docPoints.length > 1 && (
+                      <path 
+                        d={docLinePath} 
+                        fill="none" 
+                        stroke="var(--color-doc)" 
+                        strokeWidth={isExpanded ? "3" : "2.5"} 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                    )}
+                    {/* Línea de Reuniones */}
+                    {meetPoints.length > 1 && (
+                      <path 
+                        d={meetLinePath} 
+                        fill="none" 
+                        stroke="var(--color-meetings)" 
+                        strokeWidth={isExpanded ? "3" : "2.5"} 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                    )}
+
+                    {/* Nodos y Etiquetas */}
+                    {visibleHistory.map((sprint, idx) => {
+                      const devP = devPoints[idx];
+                      const docP = docPoints[idx];
+                      const meetP = meetPoints[idx];
+
+                      return (
+                        <g key={sprint.id}>
+                          {/* Dev Node */}
+                          <circle cx={devP.x} cy={devP.y} r={isExpanded ? 5 : 4} fill="var(--bg-secondary)" stroke="var(--color-dev)" strokeWidth="2" />
+                          <text x={devP.x} y={devP.y - 8} textAnchor="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--color-dev)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                            {devP.value.toFixed(0)}h
+                          </text>
+
+                          {/* Doc Node */}
+                          <circle cx={docP.x} cy={docP.y} r={isExpanded ? 5 : 4} fill="var(--bg-secondary)" stroke="var(--color-doc)" strokeWidth="2" />
+                          <text x={docP.x} y={docP.y + 12} textAnchor="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--color-doc)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                            {docP.value.toFixed(0)}h
+                          </text>
+
+                          {/* Meetings Node */}
+                          <circle cx={meetP.x} cy={meetP.y} r={isExpanded ? 5 : 4} fill="var(--bg-secondary)" stroke="var(--color-meetings)" strokeWidth="2" />
+                          <text x={meetP.x} y={meetP.y - 8} textAnchor="middle" style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--color-meetings)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                            {meetP.value}
+                          </text>
+
+                          {/* Eje X Labels */}
+                          <text 
+                            x={devP.x} 
+                            y={cHeight - (isExpanded ? 8 : 4)} 
+                            textAnchor="middle" 
+                            style={{ fontSize: isExpanded ? '0.8rem' : '0.65rem', fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}
+                          >
+                            {isExpanded ? sprint.name : (sprint.name.length > 9 ? sprint.name.substring(0, 8) + '..' : sprint.name)}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              })()}
+            </svg>
+          </div>
         </div>
       </div>
     );
@@ -926,10 +998,14 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
   const renderTrendsChart = (isExpanded = false) => {
     const tHeight = isExpanded ? 350 : 180;
-    const tWidth = isExpanded ? 800 : 560;
     const tPadLeft = isExpanded ? 60 : 45;
     const tPadRight = isExpanded ? 60 : 45;
     const tPadY = isExpanded ? 30 : 25;
+    const colItemWidth = isExpanded ? 110 : 85;
+    const baseWidth = isExpanded ? 800 : 560;
+
+    const tWidth = Math.max(baseWidth, tPadLeft + tPadRight + visibleTrends.length * colItemWidth);
+    const isScrollable = tWidth > baseWidth;
 
     return (
       <div 
@@ -948,8 +1024,13 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           </button>
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isExpanded ? '0.95rem' : '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', padding: '0 0.25rem', alignItems: 'center' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingRight: isExpanded ? '0' : '2.5rem' }}>
-            📊 Rendimiento Ágil (Story Points vs Defectos)
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: isExpanded ? '0' : '2.5rem' }}>
+            <span>📊 Rendimiento Ágil (Story Points vs Defectos)</span>
+            {isScrollable && (
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
+                (↔ Desliza)
+              </span>
+            )}
             {!isExpanded && (
               <span className="tooltip tooltip-right">
                 <Info size={20} className="info-icon" />
@@ -971,7 +1052,22 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
         </div>
 
         <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-          <svg viewBox={`0 0 ${tWidth} ${tHeight}`} width="100%" height="auto" style={{ maxWidth: '100%', overflow: 'visible' }}>
+          <div 
+            className="chart-scroll-wrapper"
+            ref={isExpanded ? null : trendsScrollRef}
+          >
+            <svg 
+              viewBox={`0 0 ${tWidth} ${tHeight}`} 
+              width={tWidth} 
+              height={tHeight} 
+              style={{ 
+                width: isScrollable ? `${tWidth}px` : '100%', 
+                minWidth: isScrollable ? `${tWidth}px` : '100%', 
+                height: 'auto', 
+                overflow: 'visible',
+                display: 'block' 
+              }}
+            >
             
             {/* Grid Lines Horizontales */}
             {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
@@ -1159,8 +1255,9 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
           </svg>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const estimatedSp_dummy = estimatedSp; // preserve alignment variable
 
