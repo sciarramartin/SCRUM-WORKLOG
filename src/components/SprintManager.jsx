@@ -19,7 +19,9 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
         velocity: s.velocity || 0,
         errors: s.errors || 0,
         capacity: s.capacity || 6,
-        estimatedSp: s.estimatedSp || 0
+        estimatedSp: s.estimatedSp || 0,
+        observations: s.observations || '',
+        improvements: s.improvements || ''
       };
     });
     setEditingSprints(initialEditing);
@@ -60,7 +62,9 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
       velocity: parseInt(data.velocity) || 0,
       errors: parseInt(data.errors) || 0,
       capacity: parseInt(data.capacity) || 6,
-      estimatedSp: parseInt(data.estimatedSp) || 0
+      estimatedSp: parseInt(data.estimatedSp) || 0,
+      observations: data.observations || '',
+      improvements: data.improvements || ''
     });
     alert('Sprint actualizado correctamente.');
   };
@@ -128,7 +132,7 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
             Edita los nombres, rangos de fechas o ingresa las métricas finales de cada sprint para el informe de tendencias del proyecto.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '6px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '620px', overflowY: 'auto', paddingRight: '6px' }}>
             {sprints.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2rem', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)' }}>
                 No hay sprints registrados. Crea uno a la izquierda.
@@ -140,7 +144,11 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                   startDate: sprint.startDate,
                   endDate: sprint.endDate,
                   velocity: sprint.velocity || 0,
-                  errors: sprint.errors || 0
+                  errors: sprint.errors || 0,
+                  capacity: sprint.capacity || 6,
+                  estimatedSp: sprint.estimatedSp || 0,
+                  observations: sprint.observations || '',
+                  improvements: sprint.improvements || ''
                 };
                 
                 const isActive = activeSprint?.id === sprint.id;
@@ -274,6 +282,44 @@ export default function SprintManager({ sprints, activeSprint, onCreateSprint, o
                           onChange={(e) => handleFieldChange(sprint.id, 'errors', parseInt(e.target.value) || 0)}
                         />
                       </div>
+                    </div>
+
+                    {/* Fila 4: Observaciones */}
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        📝 Observaciones
+                        <span className="tooltip tooltip-right">
+                          <Info size={20} className="info-icon" />
+                          <span className="tooltiptext">Observaciones generales, bloqueos o notas cualitativas del sprint.</span>
+                        </span>
+                      </label>
+                      <textarea
+                        className="form-control"
+                        rows={2}
+                        style={{ resize: 'vertical', width: '100%', fontSize: '0.8rem' }}
+                        value={editState.observations || ''}
+                        onChange={(e) => handleFieldChange(sprint.id, 'observations', e.target.value)}
+                        placeholder="Observaciones del sprint..."
+                      />
+                    </div>
+
+                    {/* Fila 5: Acciones de mejoras y adaptación */}
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        🔄 Acciones de mejoras y adaptación
+                        <span className="tooltip tooltip-right">
+                          <Info size={20} className="info-icon" />
+                          <span className="tooltiptext">Acciones concretas de mejora continua y acuerdos de adaptación del equipo.</span>
+                        </span>
+                      </label>
+                      <textarea
+                        className="form-control"
+                        rows={2}
+                        style={{ resize: 'vertical', width: '100%', fontSize: '0.8rem' }}
+                        value={editState.improvements || ''}
+                        onChange={(e) => handleFieldChange(sprint.id, 'improvements', e.target.value)}
+                        placeholder="Acciones de mejoras y adaptación..."
+                      />
                     </div>
 
                     {/* Fila 4: Acciones */}

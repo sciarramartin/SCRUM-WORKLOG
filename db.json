@@ -15,7 +15,11 @@
       "startDate": "2026-05-19",
       "endDate": "2026-06-02",
       "velocity": 30,
-      "errors": 3
+      "errors": 3,
+      "capacity": 6,
+      "estimatedSp": 0,
+      "observations": "",
+      "improvements": ""
     }
   ],
   "worklogs": [

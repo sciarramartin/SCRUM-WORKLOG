@@ -213,7 +213,7 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
   const realPoints = burnDownData.slice(0, lastLoggedDayIndex + 1);
 
   // --- CONSOLIDACIÓN DE TENDENCIAS FINALES ---
-  const validSprints = sprints.filter(s => (s.velocity !== undefined && s.velocity > 0) || (s.errors !== undefined && s.errors > 0) || logs.some(l => l.sprintId === s.id));
+  const validSprints = sprints.filter(s => (s.velocity !== undefined && s.velocity > 0) || (s.errors !== undefined && s.errors > 0) || (s.observations && s.observations.trim()) || (s.improvements && s.improvements.trim()) || logs.some(l => l.sprintId === s.id));
   const totalSprints = validSprints.length;
   
   const avgVelocity = totalSprints > 0 
@@ -1285,7 +1285,9 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       "Total Horas Registradas",
       "Horas Desarrollo",
       "Horas Reuniones",
-      "Horas Documentación"
+      "Horas Documentación",
+      "Observaciones",
+      "Acciones de mejoras y adaptación"
     ];
 
     const rowsXML = validSprints.map((s, idx) => {
@@ -1310,6 +1312,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
       const estSp = s.estimatedSp || 0;
       const realSp = s.velocity || 0;
       const pred = estSp > 0 ? `${((realSp / estSp) * 100).toFixed(0)}%` : "0%";
+      const obs = s.observations?.trim() || 'falta completar';
+      const imp = s.improvements?.trim() || 'falta completar';
       
       const isEven = idx % 2 === 0;
       const suffix = isEven ? "Even" : "Odd";
@@ -1328,6 +1332,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
     <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totals.dev.toFixed(1)}</Data></Cell>
     <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totalsMeet.toFixed(1)}</Data></Cell>
     <Cell ss:StyleID="Row${suffix}Right"><Data ss:Type="Number">${totals.doc.toFixed(1)}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Left"><Data ss:Type="String">${escapeXML(obs)}</Data></Cell>
+    <Cell ss:StyleID="Row${suffix}Left"><Data ss:Type="String">${escapeXML(imp)}</Data></Cell>
    </Row>`;
     }).join("");
 
@@ -1400,6 +1406,8 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
    <Column ss:Width="110"/>
    <Column ss:Width="110"/>
    <Column ss:Width="110"/>
+   <Column ss:Width="220"/>
+   <Column ss:Width="220"/>
    <Row ss:Height="26">
     ${headers.map(h => `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXML(h)}</Data></Cell>`).join("")}
    </Row>
@@ -1695,6 +1703,126 @@ export default function SprintAnalytics({ sprints, activeSprint, logs, users, cu
 
             {/* Histograma Consolidado (Double Axis SVG Chart) */}
             {renderTrendsChart(false)}
+          </div>
+        )}
+      </div>
+
+      {/* --- SECCIÓN: OBSERVACIONES Y ACCIONES DE MEJORA POR SPRINT --- */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '0.5rem' }}>
+        <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+              <FileText size={18} style={{ color: 'var(--primary)' }} /> Observaciones y Acciones de Mejora por Sprint
+              <span className="tooltip tooltip-left">
+                <Info size={20} className="info-icon" />
+                <span className="tooltiptext">Observaciones y acciones de mejora y adaptación configuradas para cada sprint.</span>
+              </span>
+            </h3>
+            <p className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '0.2rem' }}>
+              Registro de observaciones y acuerdos de mejora continua definidos en cada sprint.
+            </p>
+          </div>
+          <span className="badge badge-secondary" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>
+            {sprints.length} {sprints.length === 1 ? 'sprint registrado' : 'sprints registrados'}
+          </span>
+        </div>
+
+        {sprints.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+            No hay sprints registrados en el proyecto.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {sprints.map(s => {
+              const isActive = activeSprint?.id === s.id;
+              const hasObservations = Boolean(s.observations && s.observations.trim());
+              const hasImprovements = Boolean(s.improvements && s.improvements.trim());
+
+              return (
+                <div 
+                  key={s.id}
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1rem 1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    position: 'relative',
+                    boxShadow: isActive ? '0 0 10px rgba(99, 102, 241, 0.12)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                        {s.name}
+                      </span>
+                      {isActive && (
+                        <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
+                          Activo
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-secondary" style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                      📅 {s.startDate} al {s.endDate}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                    {/* Caja de Observaciones */}
+                    <div style={{ 
+                      background: 'var(--bg-secondary)', 
+                      padding: '0.85rem 1rem', 
+                      borderRadius: 'var(--radius-sm)', 
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem'
+                    }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        📝 Observaciones:
+                      </span>
+                      <div style={{ 
+                        fontSize: '0.85rem', 
+                        lineHeight: '1.5',
+                        color: hasObservations ? 'var(--text-primary)' : 'var(--text-muted)',
+                        fontStyle: hasObservations ? 'normal' : 'italic',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                      }}>
+                        {hasObservations ? s.observations : 'falta completar'}
+                      </div>
+                    </div>
+
+                    {/* Caja de Acciones de mejoras y adaptación */}
+                    <div style={{ 
+                      background: 'var(--bg-secondary)', 
+                      padding: '0.85rem 1rem', 
+                      borderRadius: 'var(--radius-sm)', 
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem'
+                    }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        🔄 Acciones de mejoras y adaptación:
+                      </span>
+                      <div style={{ 
+                        fontSize: '0.85rem', 
+                        lineHeight: '1.5',
+                        color: hasImprovements ? 'var(--text-primary)' : 'var(--text-muted)',
+                        fontStyle: hasImprovements ? 'normal' : 'italic',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                      }}>
+                        {hasImprovements ? s.improvements : 'falta completar'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
